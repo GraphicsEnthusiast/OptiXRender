@@ -438,8 +438,8 @@ void Render::CreateSBT() {
 }
 
 void Render::InitLaunchParams() {
-	params.width = 768;
-	params.height = 768;
+	params.width = width;
+	params.height = height;
 
 	CUDA_CHECK(cudaMalloc(
 		reinterpret_cast<void**>(&params.accum_buffer),
@@ -447,7 +447,7 @@ void Render::InitLaunchParams() {
 	));
 	params.frame_buffer = nullptr;  // Will be set when output buffer is mapped
 
-	params.samples_per_launch = CameraController::samples_per_launch;
+	params.samples_per_launch = samples_per_launch;
 	params.subframe_index = 0u;
 
 	params.light.emission = make_float3(15.0f, 15.0f, 5.0f);
@@ -461,7 +461,7 @@ void Render::InitLaunchParams() {
 	CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_params), sizeof(Params)));
 }
 
-void Render::Clean() {
+void Render::Cleanup() {
 	OPTIX_CHECK(optixPipelineDestroy(pipeline));
 	OPTIX_CHECK(optixProgramGroupDestroy(raygen_prog_group));
 	OPTIX_CHECK(optixProgramGroupDestroy(radiance_miss_group));
@@ -671,7 +671,7 @@ void Render::RenderLoop(const std::string& outfile) {
 			}
 		}
 
-		Clean();
+		Cleanup();
 	}
 	catch (std::exception& e){
 		std::cerr << "Caught exception: " << e.what() << "\n";

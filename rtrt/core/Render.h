@@ -237,7 +237,6 @@ namespace rtrt {
 
 		// Mouse state
 		static int32_t mouse_button = -1;
-		static int32_t samples_per_launch = 16;
 
 		static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 		static void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
@@ -250,7 +249,7 @@ namespace rtrt {
 	class Render {
 	public:
 		Render() = default;
-		Render(sutil::CUDAOutputBufferType type) : output_buffer_type(type) {}
+		Render(sutil::CUDAOutputBufferType type, int32_t spl, int w, int h) : output_buffer_type(type), samples_per_launch(spl), width(w), height(h) {}
 
 	protected:
 		static void ContextLog(unsigned int level, const char* tag, const char* message, void* /*cbdata */);
@@ -262,7 +261,7 @@ namespace rtrt {
 		void CreatePipeline();
 		void CreateSBT();
 		void InitLaunchParams();
-		void Clean();
+		void Cleanup();
 		void InitCamera();
 		void InitRender();
 
@@ -300,5 +299,7 @@ namespace rtrt {
 
 		GLFWwindow* window = NULL;
 		sutil::CUDAOutputBufferType output_buffer_type;
+		int32_t samples_per_launch;
+		int width, height;
 	};
 }
