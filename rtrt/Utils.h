@@ -22,12 +22,12 @@ namespace rtrt {
 		unsigned int height;
 		unsigned int samples_per_launch;
 
-		float3       eye;
-		float3       U;
-		float3       V;
-		float3       W;
+		float3 eye;
+		float3 U;
+		float3 V;
+		float3 W;
 
-		ParallelogramLight     light; // TODO: make light list
+		ParallelogramLight light; // TODO: make light list
 		OptixTraversableHandle handle;
 	};
 

@@ -600,7 +600,6 @@ void Render::RenderLoop(const std::string& outfile) {
 			//
 			// Render loop
 			//
-
 			sutil::CUDAOutputBuffer<uchar4> output_buffer(
 				output_buffer_type,
 				params.width,
@@ -639,8 +638,6 @@ void Render::RenderLoop(const std::string& outfile) {
 				++params.subframe_index;
 			} while (!glfwWindowShouldClose(window));
 			CUDA_SYNC_CHECK();
-
-			sutil::cleanupUI(window);
 		}
 		else {
 			if (output_buffer_type == sutil::CUDAOutputBufferType::GL_INTEROP) {
@@ -671,6 +668,7 @@ void Render::RenderLoop(const std::string& outfile) {
 			}
 		}
 
+		sutil::cleanupUI(window);
 		Cleanup();
 	}
 	catch (std::exception& e){

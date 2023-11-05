@@ -195,8 +195,6 @@ namespace rtrt {
 		3, 3                           // Ceiling light -- emmissive
 	} };
 
-
-
 	const std::array<float3, MAT_COUNT> g_emission_colors =
 	{ {
 		{  0.0f,  0.0f,  0.0f },
@@ -206,7 +204,6 @@ namespace rtrt {
 
 	} };
 
-
 	const std::array<float3, MAT_COUNT> g_diffuse_colors =
 	{ {
 		{ 0.80f, 0.80f, 0.80f },
@@ -215,15 +212,14 @@ namespace rtrt {
 		{ 0.50f, 0.00f, 0.00f }
 	} };
 
-	template <typename T>
-	struct Record
-	{
+	template<typename T>
+	struct Record {
 		__align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
 		T data;
 	};
 
-	typedef Record<RayGenData>   RayGenRecord;
-	typedef Record<MissData>     MissRecord;
+	typedef Record<RayGenData> RayGenRecord;
+	typedef Record<MissData> MissRecord;
 	typedef Record<HitGroupData> HitGroupRecord;
 
 	namespace CameraController {
@@ -248,7 +244,6 @@ namespace rtrt {
 
 	class Render {
 	public:
-		Render() = default;
 		Render(sutil::CUDAOutputBufferType type, int32_t spl, int w, int h) : output_buffer_type(type), samples_per_launch(spl), width(w), height(h) {}
 
 	protected:
