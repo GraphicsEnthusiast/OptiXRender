@@ -126,6 +126,13 @@ void Renderer::CreateTextures() {
 }
 
 OptixTraversableHandle Renderer::BuildAccel() {
+    /*
+    一个TriangleMesh就只能注册成一个物体 id，
+    一个物体id就只能绑定一个 Shader Record。
+    只有一个 Shader Record 意味着大家都使用相同的 shader 实例和传入参数，
+    那么大家都只能用相同材质了。
+    因此，我们必须将不同材质的物体分离为多个模型。
+    */
     const int numMeshes = (int)model ->meshes.size();
     vertexBuffer.resize(numMeshes);
     normalBuffer.resize(numMeshes);
@@ -147,14 +154,15 @@ OptixTraversableHandle Renderer::BuildAccel() {
         TriangleMesh & mesh = *model ->meshes[meshID];
         vertexBuffer[meshID].alloc_and_upload(mesh.vertex);
         indexBuffer[meshID].alloc_and_upload(mesh.index);
-        if (!mesh.normal.empty())
+        if (!mesh.normal.empty()) {
             normalBuffer[meshID].alloc_and_upload(mesh.normal);
-        if (!mesh.texcoord.empty())
+        }
+        if (!mesh.texcoord.empty()) {
             texcoordBuffer[meshID].alloc_and_upload(mesh.texcoord);
+        }
 
         triangleInput[meshID] = {};
-        triangleInput[meshID].type
-            = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
+        triangleInput[meshID].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
 
         // create local variables, because we need a *pointer* to the
         // device pointers
@@ -229,13 +237,11 @@ OptixTraversableHandle Renderer::BuildAccel() {
         (int)numMeshes,
         tempBuffer.d_pointer(),
         tempBuffer.sizeInBytes,
-
         outputBuffer.d_pointer(),
         outputBuffer.sizeInBytes,
-
         &asHandle,
-
-        &emitDesc, 1
+        &emitDesc, 
+        1
     ));
     CUDA_SYNC_CHECK();
 
@@ -287,10 +293,7 @@ void Renderer::InitOptix() {
         << GDT_TERMINAL_DEFAULT << std::endl;
 }
 
-static void ContextLog(unsigned int level,
-    const char* tag,
-    const char* message,
-    void*) {
+static void ContextLog(unsigned int level, const char* tag, const char* message, void*) {
     fprintf(stderr, "[%2d][%12s]: %s\n", (int)level, tag, message);
 }
 
@@ -305,13 +308,13 @@ void Renderer::CreateContext() {
     cudaGetDeviceProperties(&deviceProps, deviceID);
     std::cout << "running on device: " << deviceProps.name << std::endl;
 
-    CUresult  cuRes = cuCtxGetCurrent(&cudaContext);
-    if (cuRes != CUDA_SUCCESS)
+    CUresult cuRes = cuCtxGetCurrent(&cudaContext);
+    if (cuRes != CUDA_SUCCESS) {
         fprintf(stderr, "Error querying current context: error code %d\n", cuRes);
+    }
 
     OPTIX_CHECK(optixDeviceContextCreate(cudaContext, 0, &optixContext));
-    OPTIX_CHECK(optixDeviceContextSetLogCallback
-    (optixContext, ContextLog, nullptr, 4));
+    OPTIX_CHECK(optixDeviceContextSetLogCallback(optixContext, ContextLog, nullptr, 4));
 }
 
 /*! creates the module that contains all the programs we are going
@@ -617,8 +620,9 @@ void Renderer::Render() {
     denoiserParams.denoiseAlpha = OPTIX_DENOISER_ALPHA_MODE_ALPHA_AS_AOV;
 #endif
 #if OPTIX_VERSION >= 70300
-    if (denoiserIntensity.sizeInBytes != sizeof(float))
+    if (denoiserIntensity.sizeInBytes != sizeof(float)) {
         denoiserIntensity.alloc(sizeof(float));
+    }
 #endif
     denoiserParams.hdrIntensity = denoiserIntensity.d_pointer();
     if (accumulate) {

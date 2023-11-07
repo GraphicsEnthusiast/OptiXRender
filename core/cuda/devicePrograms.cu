@@ -17,14 +17,25 @@ extern "C" __constant__ LaunchParams optixLaunchParams;
     can access RNG state */
 struct PRD {
     Random random;
-    vec3f  pixelColor;
-    vec3f  pixelNormal;
-    vec3f  pixelAlbedo;
+    vec3f pixelColor;
+    vec3f pixelNormal;
+    vec3f pixelAlbedo;
 };
 
+/* 
+unpackPainter 和 packPainter 就是对某个指针中保存的地址进行高32位和低32位的拆分和合并。
+之所以需要拆分，是因为我们的计算机是64位的所以指针也是64位的，然而gpu的寄存器是32位的，
+因此只能将指针拆分成两部分存进gpu的寄存器。
+这里简单解释下 payload，payload 就类似一个负载寄存器，负责在不同 shader 之间传递信息。
+后面我们会在 Raygen Shader 中申请一个颜色指针来存储最终的光追颜色，当开始 tracing 后，
+会将这个颜色指针拆分（pack）写入0号和1号寄存器，当 Hit Shader 和 Miss Shader 想往里面写东西时，
+就可以通过上面代码中的 getPRD 函数获得0号和1号寄存器中的值，将其 unpack 便得到了那个颜色指针，
+然后就可以往这个颜色指针里写内容了。
+*/
 static __forceinline__ __device__ void* unpackPointer(uint32_t i0, uint32_t i1) {
     const uint64_t uptr = static_cast<uint64_t>(i0) << 32 | i1;
     void* ptr = reinterpret_cast<void*>(uptr);
+
     return ptr;
 }
 
@@ -38,6 +49,7 @@ template<typename T>
 static __forceinline__ __device__ T* getPRD() {
     const uint32_t u0 = optixGetPayload_0();
     const uint32_t u1 = optixGetPayload_1();
+
     return reinterpret_cast<T*>(unpackPointer(u0, u1));
 }
 
@@ -56,14 +68,13 @@ extern "C" __global__ void __closesthit__shadow() {
 }
 
 extern "C" __global__ void __closesthit__radiance() {
-    const TriangleMeshSBTData& sbtData
-        = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
+    const TriangleMeshSBTData& sbtData = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
     PRD& prd = *getPRD<PRD>();
 
     // ------------------------------------------------------------------
     // gather some basic hit information
     // ------------------------------------------------------------------
-    const int   primID = optixGetPrimitiveIndex();
+    const int primID = optixGetPrimitiveIndex();
     const vec3i index = sbtData.index[primID];
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
