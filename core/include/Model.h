@@ -14,26 +14,34 @@ struct TriangleMesh {
     std::vector<vec3i> index;
 
     // material data:
-    vec3f              diffuse;
-    int                diffuseTextureID { -1 };
+    vec3f diffuse;
+    int diffuseTextureID { -1 };
 };
 
 
-  struct QuadLight {
+struct QuadLight {
     vec3f origin, du, dv, power;
-  };
+};
   
 struct Texture {
-    ~Texture() { if (pixel) delete[] pixel; }
+    ~Texture() { 
+        if (pixel) {
+            delete[] pixel;
+        }
+    }
     
-    uint32_t *pixel      { nullptr };
-    vec2i     resolution { -1 };
+    uint32_t* pixel { nullptr };
+    vec2i resolution { -1 };
 };
   
 struct Model {
     ~Model() {
-      for (auto mesh : meshes) delete mesh;
-      for (auto texture : textures) delete texture;
+        for (auto mesh : meshes) {
+            delete mesh;
+      }
+        for (auto texture : textures) {
+            delete texture;
+      }
     }
     
     std::vector<TriangleMesh *> meshes;

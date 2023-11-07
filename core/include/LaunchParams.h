@@ -6,28 +6,31 @@
 using namespace gdt;
 
   // for this simple example, we have a single ray type
-enum { RADIANCE_RAY_TYPE = 0, SHADOW_RAY_TYPE, RAY_TYPE_COUNT };
+enum { 
+    RADIANCE_RAY_TYPE = 0, 
+    SHADOW_RAY_TYPE, RAY_TYPE_COUNT 
+};
 
 struct TriangleMeshSBTData {
     vec3f  color;
-    vec3f *vertex;
-    vec3f *normal;
-    vec2f *texcoord;
-    vec3i *index;
-    bool                hasTexture;
+    vec3f* vertex;
+    vec3f* normal;
+    vec2f* texcoord;
+    vec3i* index;
+    bool hasTexture;
     cudaTextureObject_t texture;
   };
   
 struct LaunchParams {
     int numPixelSamples = 1;
     struct {
-      int       frameID = 0;
-      float4   *colorBuffer;
-      float4   *normalBuffer;
-      float4   *albedoBuffer;
+      int frameID = 0;
+      float4* colorBuffer;
+      float4* normalBuffer;
+      float4* albedoBuffer;
       
       /*! the size of the frame buffer to render */
-      vec2i     size;
+      vec2i size;
     } frame;
     
     struct {

@@ -17,7 +17,7 @@ class Renderer {
 public:
     /*! constructor - performs all setup, including initializing
       optix, creates module, pipeline, programs, SBT, etc. */
-    Renderer(const Model * model, const QuadLight & light);
+    Renderer(const Model* model, const QuadLight& light);
 
     /*! render one frame */
     void Render();
@@ -30,9 +30,6 @@ public:
 
     /*! set camera to render with */
     void SetCamera(const Camera& camera);
-
-    bool denoiserOn = true;
-    bool accumulate = true;
 
 protected:
     /*! runs a cuda kernel that performs gamma correction and float4-to-rgba conversion */
@@ -74,23 +71,23 @@ protected:
 protected:
     /*! @{ CUDA device context and stream that optix pipeline will run
         on, as well as device properties for this device */
-    CUcontext          cudaContext;
-    CUstream           stream;
-    cudaDeviceProp     deviceProps;
+    CUcontext cudaContext;
+    CUstream stream;
+    cudaDeviceProp deviceProps;
     /*! @} */
 
     //! the optix context that our pipeline will run in.
     OptixDeviceContext optixContext;
 
     /*! @{ the pipeline we're building */
-    OptixPipeline               pipeline;
+    OptixPipeline pipeline;
     OptixPipelineCompileOptions pipelineCompileOptions = {};
-    OptixPipelineLinkOptions    pipelineLinkOptions = {};
+    OptixPipelineLinkOptions pipelineLinkOptions = {};
     /*! @} */
 
     /*! @{ the module that contains out device programs */
-    OptixModule                 module;
-    OptixModuleCompileOptions   moduleCompileOptions = {};
+    OptixModule module;
+    OptixModuleCompileOptions moduleCompileOptions = {};
     /* @} */
 
     /*! vector of all our program(group)s, and the SBT built around
@@ -103,13 +100,16 @@ protected:
     CUDABuffer hitgroupRecordsBuffer;
     OptixShaderBindingTable sbt = {};
 
+public:
+	bool denoiserOn = true;
+	bool accumulate = true;
+
     /*! @{ our launch parameters, on the host, and the buffer to store
         them on the device */
-public:
     LaunchParams launchParams;
 
 protected:
-    CUDABuffer   launchParamsBuffer;
+    CUDABuffer launchParamsBuffer;
     /*! @} */
 
     /*! the color buffer we use during _rendering_, which is a bit
@@ -127,15 +127,15 @@ protected:
     CUDABuffer finalColorBuffer;
 
     OptixDenoiser denoiser = nullptr;
-    CUDABuffer    denoiserScratch;
-    CUDABuffer    denoiserState;
-    CUDABuffer    denoiserIntensity;
+    CUDABuffer denoiserScratch;
+    CUDABuffer denoiserState;
+    CUDABuffer denoiserIntensity;
 
     //! buffer that keeps the (final, compacted) accel structure
     CUDABuffer asBuffer;
 
     /*! the model we are going to trace rays against */
-    const Model *model;
+    const Model* model;
 
     /*! @{ one buffer per input mesh */
     std::vector<CUDABuffer> vertexBuffer;
@@ -145,7 +145,7 @@ protected:
     /*! @} */
 
     /*! @{ one texture object and pixel array per used texture */
-    std::vector<cudaArray_t>         textureArrays;
+    std::vector<cudaArray_t> textureArrays;
     std::vector<cudaTextureObject_t> textureObjects;
     /*! @} */
 

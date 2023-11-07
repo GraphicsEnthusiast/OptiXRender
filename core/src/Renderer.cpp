@@ -282,7 +282,7 @@ void Renderer::InitOptix() {
         << GDT_TERMINAL_DEFAULT << std::endl;
 }
 
-static void context_log_cb(unsigned int level,
+static void ContextLog(unsigned int level,
     const char* tag,
     const char* message,
     void*) {
@@ -306,7 +306,7 @@ void Renderer::CreateContext() {
 
     OPTIX_CHECK(optixDeviceContextCreate(cudaContext, 0, &optixContext));
     OPTIX_CHECK(optixDeviceContextSetLogCallback
-    (optixContext, context_log_cb, nullptr, 4));
+    (optixContext, ContextLog, nullptr, 4));
 }
 
 /*! creates the module that contains all the programs we are going
@@ -339,7 +339,9 @@ void Renderer::CreateModule() {
         log, &sizeof_log,
         &module
     ));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 }
 
 /*! does all setup for the raygen program(s) we are going to use */
@@ -363,7 +365,9 @@ void Renderer::CreateRaygenPrograms() {
         log, &sizeof_log,
         &raygenPGs[0]
     ));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 }
 
 /*! does all setup for the miss program(s) we are going to use */
@@ -391,7 +395,9 @@ void Renderer::CreateMissPrograms() {
         log, &sizeof_log,
         &missPGs[RADIANCE_RAY_TYPE]
     ));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 
     // ------------------------------------------------------------------
     // shadow rays
@@ -405,7 +411,9 @@ void Renderer::CreateMissPrograms() {
         log, &sizeof_log,
         &missPGs[SHADOW_RAY_TYPE]
     ));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 }
 
 /*! does all setup for the hitgroup program(s) we are going to use */
@@ -435,7 +443,9 @@ void Renderer::CreateHitgroupPrograms() {
         log, &sizeof_log,
         &hitgroupPGs[RADIANCE_RAY_TYPE]
     ));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 
     // -------------------------------------------------------
     // shadow rays: technically we don't need this hit group,
@@ -452,18 +462,23 @@ void Renderer::CreateHitgroupPrograms() {
         log, &sizeof_log,
         &hitgroupPGs[SHADOW_RAY_TYPE]
     ));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 }
 
 /*! assembles the full pipeline of all programs */
 void Renderer::CreatePipeline() {
     std::vector<OptixProgramGroup> programGroups;
-    for (auto pg : raygenPGs)
+    for (auto pg : raygenPGs) {
         programGroups.push_back(pg);
-    for (auto pg : hitgroupPGs)
+    }
+    for (auto pg : hitgroupPGs) {
         programGroups.push_back(pg);
-    for (auto pg : missPGs)
+    }
+    for (auto pg : missPGs) {
         programGroups.push_back(pg);
+    }
 
     char log[2048];
     size_t sizeof_log = sizeof(log);
@@ -477,7 +492,9 @@ void Renderer::CreatePipeline() {
         log, &sizeof_log,
         &pipeline
     ));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 
     OPTIX_CHECK(optixPipelineSetStackSize
     (/* [in] The pipeline to configure the stack size for */
@@ -493,7 +510,9 @@ void Renderer::CreatePipeline() {
         /* [in] The maximum depth of a traversable graph
            passed to trace. */
         1));
-    if (sizeof_log > 1) PRINT(log);
+    if (sizeof_log > 1) {
+        PRINT(log);
+    }
 }
 
 
@@ -563,10 +582,13 @@ void Renderer::BuildSBT() {
 void Renderer::Render() {
     // sanity check: make sure we launch only after first resize is
     // already done:
-    if (launchParams.frame.size.x == 0) return;
+    if (launchParams.frame.size.x == 0) {
+        return;
+    }
 
-    if (!accumulate)
+    if (!accumulate) {
         launchParams.frame.frameID = 0;
+    }
     launchParamsBuffer.upload(&launchParams, 1);
     launchParams.frame.frameID++;
 
@@ -593,10 +615,12 @@ void Renderer::Render() {
         denoiserIntensity.alloc(sizeof(float));
 #endif
     denoiserParams.hdrIntensity = denoiserIntensity.d_pointer();
-    if (accumulate)
+    if (accumulate) {
         denoiserParams.blendFactor = 1.0f / (launchParams.frame.frameID);
-    else
+    }
+    else {
         denoiserParams.blendFactor = 0.0f;
+    }
 
     // -------------------------------------------------------
     OptixImage2D inputLayer[3];
