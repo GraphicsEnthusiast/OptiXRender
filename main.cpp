@@ -1,124 +1,129 @@
 #include "Renderer.h"
+
+// our helper library for window handling
 #include "glfWindow/GLFWindow.h"
 #include <GL/gl.h>
 
-using namespace osc;
+/*! \namespace osc - Optix Siggraph Course */
+namespace osc {
 
-struct SampleWindow : public GLFCameraWindow
-{
-	SampleWindow(const std::string& title,
-		const Camera& camera,
-		const Scene& scene,
-		const float worldScale)
-		: GLFCameraWindow(title, camera.from, camera.at, camera.up, worldScale),
-		sample(scene)
-	{
-		sample.SetCamera(camera);
-	}
+  struct SampleWindow : public GLFCameraWindow
+  {
+    SampleWindow(const std::string &title,
+                 const Model *model,
+                 const Camera &camera,
+                 const QuadLight &light,
+                 const float worldScale)
+      : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale),
+        sample(model,light)
+    {
+      sample.SetCamera(camera);
+    }
+    
+    virtual void render() override
+    {
+      if (cameraFrame.modified) {
+        sample.SetCamera(Camera{ cameraFrame.get_from(),
+                                 cameraFrame.get_at(),
+                                 cameraFrame.get_up() });
+        cameraFrame.modified = false;
+      }
+      sample.Render();
+    }
+    
+    virtual void draw() override
+    {
+      sample.DownloadPixels(pixels.data());
+      if (fbTexture == 0)
+        glGenTextures(1, &fbTexture);
+      
+      glBindTexture(GL_TEXTURE_2D, fbTexture);
+      GLenum texFormat = GL_RGBA;
+      GLenum texelType = GL_UNSIGNED_BYTE;
+      glTexImage2D(GL_TEXTURE_2D, 0, texFormat, fbSize.x, fbSize.y, 0, GL_RGBA,
+                   texelType, pixels.data());
 
-	virtual void render() override
-	{
-		if (cameraFrame.modified) {
-			sample.SetCamera(Camera{ cameraFrame.get_from(),
-									 cameraFrame.get_at(),
-									 cameraFrame.get_up() });
-			cameraFrame.modified = false;
-		}
-		sample.Render();
-	}
+      glDisable(GL_LIGHTING);
+      glColor3f(1, 1, 1);
 
-	virtual void draw() override
-	{
-		sample.DownloadPixels(pixels.data());
-		if (fbTexture == 0)
-			glGenTextures(1, &fbTexture);
+      glMatrixMode(GL_MODELVIEW);
+      glLoadIdentity();
 
-		glBindTexture(GL_TEXTURE_2D, fbTexture);
-		GLenum texFormat = GL_RGBA;
-		GLenum texelType = GL_UNSIGNED_BYTE;
-		glTexImage2D(GL_TEXTURE_2D, 0, texFormat, fbSize.x, fbSize.y, 0, GL_RGBA,
-			texelType, pixels.data());
+      glEnable(GL_TEXTURE_2D);
+      glBindTexture(GL_TEXTURE_2D, fbTexture);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      
+      glDisable(GL_DEPTH_TEST);
 
-		glDisable(GL_LIGHTING);
-		glColor3f(1, 1, 1);
+      glViewport(0, 0, fbSize.x, fbSize.y);
 
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
+      glMatrixMode(GL_PROJECTION);
+      glLoadIdentity();
+      glOrtho(0.f, (float)fbSize.x, 0.f, (float)fbSize.y, -1.f, 1.f);
 
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, fbTexture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glBegin(GL_QUADS);
+      {
+        glTexCoord2f(0.f, 0.f);
+        glVertex3f(0.f, 0.f, 0.f);
+      
+        glTexCoord2f(0.f, 1.f);
+        glVertex3f(0.f, (float)fbSize.y, 0.f);
+      
+        glTexCoord2f(1.f, 1.f);
+        glVertex3f((float)fbSize.x, (float)fbSize.y, 0.f);
+      
+        glTexCoord2f(1.f, 0.f);
+        glVertex3f((float)fbSize.x, 0.f, 0.f);
+      }
+      glEnd();
+    }
+    
+    virtual void resize(const vec2i &newSize) 
+    {
+      fbSize = newSize;
+      sample.Resize(newSize);
+      pixels.resize(newSize.x*newSize.y);
+    }
 
-		glDisable(GL_DEPTH_TEST);
+    virtual void key(int key, int mods)
+    {
+      if (key == 'D' || key == ' ' || key == 'd') {
+        sample.denoiserOn = !sample.denoiserOn;
+        std::cout << "denoising now " << (sample.denoiserOn?"ON":"OFF") << std::endl;
+      }
+      if (key == 'A' || key == 'a') {
+        sample.accumulate = !sample.accumulate;
+        std::cout << "accumulation/progressive refinement now " << (sample.accumulate?"ON":"OFF") << std::endl;
+      }
+      if (key == ',') {
+        sample.launchParams.numPixelSamples
+          = std::max(1,sample.launchParams.numPixelSamples-1);
+        std::cout << "num samples/pixel now "
+                  << sample.launchParams.numPixelSamples << std::endl;
+      }
+      if (key == '.') {
+        sample.launchParams.numPixelSamples
+          = std::max(1,sample.launchParams.numPixelSamples+1);
+        std::cout << "num samples/pixel now "
+                  << sample.launchParams.numPixelSamples << std::endl;
+      }
+    }
+    
 
-		glViewport(0, 0, fbSize.x, fbSize.y);
-
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0.f, (float)fbSize.x, 0.f, (float)fbSize.y, -1.f, 1.f);
-
-		glBegin(GL_QUADS);
-		{
-			glTexCoord2f(0.f, 0.f);
-			glVertex3f(0.f, 0.f, 0.f);
-
-			glTexCoord2f(0.f, 1.f);
-			glVertex3f(0.f, (float)fbSize.y, 0.f);
-
-			glTexCoord2f(1.f, 1.f);
-			glVertex3f((float)fbSize.x, (float)fbSize.y, 0.f);
-
-			glTexCoord2f(1.f, 0.f);
-			glVertex3f((float)fbSize.x, 0.f, 0.f);
-		}
-		glEnd();
-	}
-
-	virtual void resize(const vec2i& newSize)
-	{
-		fbSize = newSize;
-		sample.Resize(newSize);
-		pixels.resize(newSize.x * newSize.y);
-	}
-
-	virtual void key(int key, int mods)
-	{
-		if (key == 'D' || key == ' ' || key == 'd') {
-			sample.denoiserOn = !sample.denoiserOn;
-			std::cout << "denoising now " << (sample.denoiserOn ? "ON" : "OFF") << std::endl;
-		}
-		if (key == 'A' || key == 'a') {
-			sample.accumulate = !sample.accumulate;
-			std::cout << "accumulation/progressive refinement now " << (sample.accumulate ? "ON" : "OFF") << std::endl;
-		}
-		if (key == ',') {
-			sample.launchParams.numPixelSamples
-				= std::max(1, sample.launchParams.numPixelSamples - 1);
-			std::cout << "num samples/pixel now "
-				<< sample.launchParams.numPixelSamples << std::endl;
-		}
-		if (key == '.') {
-			sample.launchParams.numPixelSamples
-				= std::max(1, sample.launchParams.numPixelSamples + 1);
-			std::cout << "num samples/pixel now "
-				<< sample.launchParams.numPixelSamples << std::endl;
-		}
-	}
-
-
-	vec2i                 fbSize;
-	GLuint                fbTexture{ 0 };
-	Renderer              sample;
-	std::vector<uint32_t> pixels;
-};
-
-
-/*! main entry point to this example - initially optix, print hello
-  world, then exit */
-extern "C" int main(int ac, char** av) {
-	try {
-		Model* model = LoadOBJ(
+    vec2i                 fbSize;
+    GLuint                fbTexture {0};
+    Renderer        sample;
+    std::vector<uint32_t> pixels;
+  };
+  
+  
+  /*! main entry point to this example - initially optix, print hello
+    world, then exit */
+  extern "C" int main(int ac, char **av)
+  {
+    try {
+      Model *model = LoadOBJ(
 #ifdef _WIN32
       // on windows, visual studio creates _two_ levels of build dir
       // (x86/Release)
@@ -135,18 +140,17 @@ extern "C" int main(int ac, char** av) {
 
       // some simple, hard-coded light ... obviously, only works for sponza
       const float light_size = 200.f;
-	  Light light;
-	  light.position = vec3f(-1000 - light_size, 800, -light_size);
-	  light.du = vec3f(2.f * light_size, 0, 0);
-	  light.dv = vec3f(0, 0, 2.f * light_size);
-	  light.radiance = vec3f(3000000.f);
+      QuadLight light = { /* origin */ vec3f(-1000-light_size,800,-light_size),
+                          /* edge 1 */ vec3f(2.f*light_size,0,0),
+                          /* edge 2 */ vec3f(0,0,2.f*light_size),
+                          /* power */  vec3f(3000000.f) };
                       
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
-      const float worldScale = length(model->bounds.span());
+      const float worldScale = length(model ->bounds.span());
 
-	  Scene scene(model, light);
-      SampleWindow *window = new SampleWindow("Optix 7 Course Example", camera,scene, worldScale);
+      SampleWindow *window = new SampleWindow("Optix 7 Course Example",
+                                              model,camera,light,worldScale);
       window->enableFlyMode();
       
       std::cout << "Press 'a' to enable/disable accumulation/progressive refinement" << std::endl;
@@ -162,4 +166,6 @@ extern "C" int main(int ac, char** av) {
 	  exit(1);
     }
     return 0;
-}
+  }
+  
+} // ::osc

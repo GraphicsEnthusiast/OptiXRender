@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Scene.h"
+#include "CUDABuffer.h"
+#include "LaunchParams.h"
+#include "Model.h"
 
 struct Camera {
     /*! camera position - *from* where we are looking */
@@ -15,7 +17,7 @@ class Renderer {
 public:
     /*! constructor - performs all setup, including initializing
       optix, creates module, pipeline, programs, SBT, etc. */
-    Renderer(const Scene& sce);
+    Renderer(const Model * model, const QuadLight & light);
 
     /*! render one frame */
     void Render();
@@ -132,6 +134,9 @@ protected:
     //! buffer that keeps the (final, compacted) accel structure
     CUDABuffer asBuffer;
 
+    /*! the model we are going to trace rays against */
+    const Model *model;
+
     /*! @{ one buffer per input mesh */
     std::vector<CUDABuffer> vertexBuffer;
     std::vector<CUDABuffer> normalBuffer;
@@ -146,6 +151,4 @@ protected:
 
     /*! the camera we are to render with. */
     Camera lastSetCamera;
-
-    Scene scene;
 };

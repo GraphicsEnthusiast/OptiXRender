@@ -29,13 +29,13 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) HitgroupRecord {
 
 /*! constructor - performs all setup, including initializing
   optix, creates module, pipeline, programs, SBT, etc. */
-Renderer::Renderer(const Scene& sce) : scene(sce) {
+Renderer::Renderer(const Model *model, const QuadLight &light) : model(model) {
     InitOptix();
 
-    launchParams.light.origin = scene.light.position;
-    launchParams.light.du = scene.light.du;
-    launchParams.light.dv = scene.light.dv;
-    launchParams.light.power = scene.light.radiance;
+    launchParams.light.origin = light.origin;
+    launchParams.light.du = light.du;
+    launchParams.light.dv = light.dv;
+    launchParams.light.power = light.power;
 
     std::cout << "creating optix context ..." << std::endl;
     CreateContext();
@@ -69,13 +69,13 @@ Renderer::Renderer(const Scene& sce) : scene(sce) {
 }
 
 void Renderer::CreateTextures() {
-    int numTextures = (int)scene.model->textures.size();
+    int numTextures = (int)model ->textures.size();
 
     textureArrays.resize(numTextures);
     textureObjects.resize(numTextures);
 
     for (int textureID = 0; textureID < numTextures; textureID++) {
-        auto texture = scene.model->textures[textureID];
+        auto texture = model ->textures[textureID];
 
         cudaResourceDesc res_desc = {};
 
@@ -121,7 +121,7 @@ void Renderer::CreateTextures() {
 }
 
 OptixTraversableHandle Renderer::BuildAccel() {
-    const int numMeshes = (int)scene.model->meshes.size();
+    const int numMeshes = (int)model ->meshes.size();
     vertexBuffer.resize(numMeshes);
     normalBuffer.resize(numMeshes);
     texcoordBuffer.resize(numMeshes);
@@ -139,7 +139,7 @@ OptixTraversableHandle Renderer::BuildAccel() {
 
     for (int meshID = 0; meshID < numMeshes; meshID++) {
         // upload the model to the device: the builder
-        TriangleMesh& mesh = *scene.model->meshes[meshID];
+        TriangleMesh & mesh = *model ->meshes[meshID];
         vertexBuffer[meshID].alloc_and_upload(mesh.vertex);
         indexBuffer[meshID].alloc_and_upload(mesh.index);
         if (!mesh.normal.empty())
@@ -530,11 +530,11 @@ void Renderer::BuildSBT() {
     // ------------------------------------------------------------------
     // build hitgroup records
     // ------------------------------------------------------------------
-    int numObjects = (int)scene.model->meshes.size();
+    int numObjects = (int)model->meshes.size();
     std::vector<HitgroupRecord> hitgroupRecords;
     for (int meshID = 0; meshID < numObjects; meshID++) {
         for (int rayID = 0; rayID < RAY_TYPE_COUNT; rayID++) {
-            auto mesh = scene.model->meshes[meshID];
+            auto mesh = model ->meshes[meshID];
 
             HitgroupRecord rec;
             OPTIX_CHECK(optixSbtRecordPackHeader(hitgroupPGs[rayID], &rec));

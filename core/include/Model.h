@@ -17,6 +17,11 @@ struct TriangleMesh {
     vec3f              diffuse;
     int                diffuseTextureID { -1 };
 };
+
+
+  struct QuadLight {
+    vec3f origin, du, dv, power;
+  };
   
 struct Texture {
     ~Texture() { if (pixel) delete[] pixel; }
