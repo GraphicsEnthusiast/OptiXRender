@@ -22,25 +22,20 @@ struct PRD {
     vec3f  pixelAlbedo;
 };
 
-static __forceinline__ __device__
-void* unpackPointer(uint32_t i0, uint32_t i1)
-{
+static __forceinline__ __device__ void* unpackPointer(uint32_t i0, uint32_t i1) {
     const uint64_t uptr = static_cast<uint64_t>(i0) << 32 | i1;
     void* ptr = reinterpret_cast<void*>(uptr);
     return ptr;
 }
 
-static __forceinline__ __device__
-void  packPointer(void* ptr, uint32_t& i0, uint32_t& i1)
-{
+static __forceinline__ __device__ void packPointer(void* ptr, uint32_t& i0, uint32_t& i1) {
     const uint64_t uptr = reinterpret_cast<uint64_t>(ptr);
     i0 = uptr >> 32;
     i1 = uptr & 0x00000000ffffffff;
 }
 
 template<typename T>
-static __forceinline__ __device__ T* getPRD()
-{
+static __forceinline__ __device__ T* getPRD() {
     const uint32_t u0 = optixGetPayload_0();
     const uint32_t u1 = optixGetPayload_1();
     return reinterpret_cast<T*>(unpackPointer(u0, u1));
@@ -56,13 +51,11 @@ static __forceinline__ __device__ T* getPRD()
 // one group of them to set up the SBT)
 //------------------------------------------------------------------------------
 
-extern "C" __global__ void __closesthit__shadow()
-{
+extern "C" __global__ void __closesthit__shadow() {
     /* not going to be used ... */
 }
 
-extern "C" __global__ void __closesthit__radiance()
-{
+extern "C" __global__ void __closesthit__radiance() {
     const TriangleMeshSBTData& sbtData
         = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
     PRD& prd = *getPRD<PRD>();
@@ -175,12 +168,10 @@ extern "C" __global__ void __closesthit__radiance()
     prd.pixelColor = pixelColor;
 }
 
-extern "C" __global__ void __anyhit__radiance()
-{ /*! for this simple example, this will remain empty */
+extern "C" __global__ void __anyhit__radiance() { /*! for this simple example, this will remain empty */
 }
 
-extern "C" __global__ void __anyhit__shadow()
-{ /*! not going to be used */
+extern "C" __global__ void __anyhit__shadow() { /*! not going to be used */
 }
 
 //------------------------------------------------------------------------------
@@ -191,15 +182,13 @@ extern "C" __global__ void __anyhit__shadow()
 // need to have _some_ dummy function to set up a valid SBT
 // ------------------------------------------------------------------------------
 
-extern "C" __global__ void __miss__radiance()
-{
+extern "C" __global__ void __miss__radiance() {
     PRD& prd = *getPRD<PRD>();
     // set to constant white as background color
     prd.pixelColor = vec3f(1.f);
 }
 
-extern "C" __global__ void __miss__shadow()
-{
+extern "C" __global__ void __miss__shadow() {
     // we didn't hit anything, so the light is visible
     vec3f& prd = *(vec3f*)getPRD<vec3f>();
     prd = vec3f(1.f);
@@ -208,8 +197,7 @@ extern "C" __global__ void __miss__shadow()
 //------------------------------------------------------------------------------
 // ray gen program - the actual rendering happens in here
 //------------------------------------------------------------------------------
-extern "C" __global__ void __raygen__renderFrame()
-{
+extern "C" __global__ void __raygen__renderFrame() {
     // compute a test pattern based on pixel ID
     const int ix = optixGetLaunchIndex().x;
     const int iy = optixGetLaunchIndex().y;

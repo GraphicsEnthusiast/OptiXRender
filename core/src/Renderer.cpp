@@ -3,9 +3,16 @@
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
+// .cu文件编译出来的 ptx 机器码
 extern "C" char embedded_ptx_code[];
 
-/*! SBT record for a raygen program */
+// Record 是 SBT 里面维护的着色器记录项，用来和场景中的材质实例做映射绑定的。
+// 由于 Record 对于字节对齐要求很高，所以用到了 __align__ 关键字；
+// 每个 Record 都有一个 header 表示该着色器实例的句柄。
+// 由于一个场景中只需要一个 RaygenRecord 和一个 MissRecord，
+// 所以他们内部直接声明场景数据即可，即 void* data；而 HitRecord 可能会有若干个，
+// 分别对应不同的物体或材质，所以他们内部需要声明一个 int objectID，
+// 表示当前的 HitRecord 绑定的是几号物体/材质。
 struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) RaygenRecord {
     __align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     // just a dummy value - later examples will use more interesting
@@ -13,7 +20,6 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) RaygenRecord {
     void* data;
 };
 
-/*! SBT record for a miss program */
 struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) MissRecord {
     __align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     // just a dummy value - later examples will use more interesting
@@ -21,7 +27,6 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) MissRecord {
     void* data;
 };
 
-/*! SBT record for a hitgroup program */
 struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) HitgroupRecord {
     __align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     TriangleMeshSBTData data;
@@ -323,12 +328,14 @@ void Renderer::CreateModule() {
     pipelineCompileOptions.numPayloadValues = 2;
     pipelineCompileOptions.numAttributeValues = 2;
     pipelineCompileOptions.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
+    // .cu文件里定义的“optixLaunchParams”会被置为光追的最终输出。
     pipelineCompileOptions.pipelineLaunchParamsVariableName = "optixLaunchParams";
 
     pipelineLinkOptions.maxTraceDepth = 2;
 
+    // embedded_ptx_code（即前面我们编译出来的着色器机器码）被绑定在了Module身上。
+    // 我们的着色器机器码以 Module 为媒介，成功和管线取得了绑定。
     const std::string ptxCode = embedded_ptx_code;
-
     char log[2048];
     size_t sizeof_log = sizeof(log);
     OPTIX_CHECK(optixModuleCreateFromPTX(optixContext,
@@ -344,7 +351,9 @@ void Renderer::CreateModule() {
     }
 }
 
-/*! does all setup for the raygen program(s) we are going to use */
+// 创建管线中的着色器实例。要声明各类着色器分别有几个，
+// 对应的是哪个 module，各个着色器在 module 中着色器机器码的入口函数是什么，
+// 最后靠 optixProgramGroupCreate 函数来得到一个定义完全的着色器实例。
 void Renderer::CreateRaygenPrograms() {
     // we do a single ray gen program in this example:
     raygenPGs.resize(1);
@@ -370,7 +379,6 @@ void Renderer::CreateRaygenPrograms() {
     }
 }
 
-/*! does all setup for the miss program(s) we are going to use */
 void Renderer::CreateMissPrograms() {
     // we do a single ray gen program in this example:
     missPGs.resize(RAY_TYPE_COUNT);
@@ -416,7 +424,6 @@ void Renderer::CreateMissPrograms() {
     }
 }
 
-/*! does all setup for the hitgroup program(s) we are going to use */
 void Renderer::CreateHitgroupPrograms() {
     // for this simple example, we set up a single hit group
     hitgroupPGs.resize(RAY_TYPE_COUNT);
@@ -514,7 +521,6 @@ void Renderer::CreatePipeline() {
         PRINT(log);
     }
 }
-
 
 /*! constructs the shader binding table */
 void Renderer::BuildSBT() {
