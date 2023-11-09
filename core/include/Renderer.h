@@ -2,24 +2,15 @@
 
 #include "CUDABuffer.h"
 #include "LaunchParams.h"
-#include "Model.h"
+#include "Scene.h"
 
 // ²Î¿¼×ÊÁÏ£ºhttps://puluo.top/optix_01/
-
-struct Camera {
-    /*! camera position - *from* where we are looking */
-    vec3f from;
-    /*! which point we are looking *at* */
-    vec3f at;
-    /*! general up-vector */
-    vec3f up;
-};
 
 class Renderer {
 public:
     /*! constructor - performs all setup, including initializing
       optix, creates module, pipeline, programs, SBT, etc. */
-    Renderer(const Model* model, const QuadLight& light);
+    Renderer(const Scene* scene);
 
     /*! render one frame */
     void Render();
@@ -178,7 +169,7 @@ protected:
     CUDABuffer asBuffer;
 
     /*! the model we are going to trace rays against */
-    const Model* model;
+    const Scene* scene;
 
     /*! @{ one buffer per input mesh */
     std::vector<CUDABuffer> vertexBuffer;

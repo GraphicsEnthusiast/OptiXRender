@@ -9,13 +9,12 @@ namespace osc {
 
   struct SampleWindow : public GLFCameraWindow
   {
-    SampleWindow(const std::string &title,
-                 const Model *model,
-                 const Camera &camera,
-                 const QuadLight &light,
+    SampleWindow(const std::string& title,
+                 const Scene* scene,
+                 const Camera& camera,
                  const float worldScale)
       : GLFCameraWindow(title,camera.from,camera.at,camera.up,worldScale),
-        sample(model,light)
+        sample(scene)
     {
       sample.SetCamera(camera);
     }
@@ -123,7 +122,8 @@ namespace osc {
   extern "C" int main(int ac, char **av)
   {
     try {
-      Model *model = LoadOBJ(
+        Scene scene;
+        scene.LoadMesh(
 #ifdef _WIN32
       // on windows, visual studio creates _two_ levels of build dir
       // (x86/Release)
@@ -135,23 +135,24 @@ namespace osc {
 #endif
                              );
       Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
-                        /* at */model->bounds.center()-vec3f(0,400,0),
+                        /* at */scene.bounds.center()-vec3f(0,400,0),
                         /* up */vec3f(0.f,1.f,0.f) };
 
       // some simple, hard-coded light ... obviously, only works for sponza
       const float light_size = 200.f;
-      QuadLight light = { /* origin */ vec3f(-1000-light_size,800,-light_size),
-                          /* edge 1 */ vec3f(2.f*light_size,0,0),
-                          /* edge 2 */ vec3f(0,0,2.f*light_size),
-                          /* power */  vec3f(3000000.f) };
+      Light light = { /* origin */ vec3f(-1000-light_size,800,-light_size),
+                      /* edge 1 */ vec3f(2.f*light_size,0,0),
+                      /* edge 2 */ vec3f(0,0,2.f*light_size),
+                      /* power */  vec3f(3000000.f) };
                       
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
-      const float worldScale = length(model ->bounds.span());
-
+      const float worldScale = length(scene.bounds.span());
+      scene.AddLight(light);
       SampleWindow *window = new SampleWindow("Optix 7 Course Example",
-                                              model,camera,light,worldScale);
-      window->enableFlyMode();
+                                             &scene,camera,worldScale);
+//      window->enableFlyMode();
+      window->enableInspectMode();
       
       std::cout << "Press 'a' to enable/disable accumulation/progressive refinement" << std::endl;
       std::cout << "Press ' ' to enable/disable denoising" << std::endl;

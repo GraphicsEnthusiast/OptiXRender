@@ -7,9 +7,9 @@ find_package(OpenGL REQUIRED)
 add_library(core 
     ./include/LaunchParams.h
     ./include/Renderer.h
-    ./include/Model.h
+    ./include/Scene.h
     src/Renderer.cpp
-    src/Model.cpp
+    src/Scene.cpp
 )
 
 target_include_directories(core PUBLIC 

@@ -34,13 +34,13 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) HitgroupRecord {
 
 /*! constructor - performs all setup, including initializing
   optix, creates module, pipeline, programs, SBT, etc. */
-Renderer::Renderer(const Model *model, const QuadLight &light) : model(model) {
+Renderer::Renderer(const Scene* scene) : scene(scene) {
     InitOptix();
 
-    launchParams.light.origin = light.origin;
-    launchParams.light.du = light.du;
-    launchParams.light.dv = light.dv;
-    launchParams.light.power = light.power;
+    launchParams.light.origin = scene->lights[0].origin;
+    launchParams.light.du = scene->lights[0].du;
+    launchParams.light.dv = scene->lights[0].dv;
+    launchParams.light.power = scene->lights[0].power;
 
     std::cout << "creating optix context ..." << std::endl;
     CreateContext();
@@ -74,13 +74,13 @@ Renderer::Renderer(const Model *model, const QuadLight &light) : model(model) {
 }
 
 void Renderer::CreateTextures() {
-    int numTextures = (int)model ->textures.size();
+    int numTextures = (int)scene->textures.size();
 
     textureArrays.resize(numTextures);
     textureObjects.resize(numTextures);
 
     for (int textureID = 0; textureID < numTextures; textureID++) {
-        auto texture = model ->textures[textureID];
+        auto texture = scene ->textures[textureID];
 
         cudaResourceDesc res_desc = {};
 
@@ -133,7 +133,7 @@ OptixTraversableHandle Renderer::BuildAccel() {
     那么大家都只能用相同材质了。
     因此，我们必须将不同材质的物体分离为多个模型。
     */
-    const int numMeshes = (int)model ->meshes.size();
+    const int numMeshes = (int)scene->meshes.size();
     vertexBuffer.resize(numMeshes);
     normalBuffer.resize(numMeshes);
     texcoordBuffer.resize(numMeshes);
@@ -151,7 +151,7 @@ OptixTraversableHandle Renderer::BuildAccel() {
 
     for (int meshID = 0; meshID < numMeshes; meshID++) {
         // upload the model to the device: the builder
-        TriangleMesh & mesh = *model ->meshes[meshID];
+        TriangleMesh& mesh = *scene->meshes[meshID];
         vertexBuffer[meshID].alloc_and_upload(mesh.vertex);
         indexBuffer[meshID].alloc_and_upload(mesh.index);
         if (!mesh.normal.empty()) {
@@ -558,11 +558,11 @@ void Renderer::BuildSBT() {
     // ------------------------------------------------------------------
     // build hitgroup records
     // ------------------------------------------------------------------
-    int numObjects = (int)model->meshes.size();
+    int numObjects = (int)scene->meshes.size();
     std::vector<HitgroupRecord> hitgroupRecords;
     for (int meshID = 0; meshID < numObjects; meshID++) {
         for (int rayID = 0; rayID < RAY_TYPE_COUNT; rayID++) {
-            auto mesh = model ->meshes[meshID];
+            auto mesh = scene->meshes[meshID];
 
             HitgroupRecord rec;
             OPTIX_CHECK(optixSbtRecordPackHeader(hitgroupPGs[rayID], &rec));

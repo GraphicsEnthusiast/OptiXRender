@@ -5,7 +5,7 @@
 
 using namespace gdt;
 
-  // for this simple example, we have a single ray type
+// for this simple example, we have a single ray type
 enum { 
     RADIANCE_RAY_TYPE = 0, 
     SHADOW_RAY_TYPE, 
@@ -20,7 +20,7 @@ struct TriangleMeshSBTData {
     vec3i* index;
     bool hasTexture;
     cudaTextureObject_t texture;
-  };
+};
   
 struct LaunchParams {
     int numPixelSamples = 1;
