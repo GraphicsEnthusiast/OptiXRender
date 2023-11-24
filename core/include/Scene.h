@@ -47,9 +47,7 @@ public:
     ~Scene();
 
     void LoadMesh(const std::string& objFile);
-    inline void AddLight(const Light& l) {
-        lights.emplace_back(l);
-    }
+    void AddLight(const Light& l);
     
 public:
     std::vector<TriangleMesh*> meshes;

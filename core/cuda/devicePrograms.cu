@@ -23,14 +23,14 @@ struct PRD {
 };
 
 /* 
-unpackPainter ºÍ packPainter ¾ÍÊÇ¶ÔÄ³¸öÖ¸ÕëÖĞ±£´æµÄµØÖ·½øĞĞ¸ß32Î»ºÍµÍ32Î»µÄ²ğ·ÖºÍºÏ²¢¡£
-Ö®ËùÒÔĞèÒª²ğ·Ö£¬ÊÇÒòÎªÎÒÃÇµÄ¼ÆËã»úÊÇ64Î»µÄËùÒÔÖ¸ÕëÒ²ÊÇ64Î»µÄ£¬È»¶øgpuµÄ¼Ä´æÆ÷ÊÇ32Î»µÄ£¬
-Òò´ËÖ»ÄÜ½«Ö¸Õë²ğ·Ö³ÉÁ½²¿·Ö´æ½øgpuµÄ¼Ä´æÆ÷¡£
-ÕâÀï¼òµ¥½âÊÍÏÂ payload£¬payload ¾ÍÀàËÆÒ»¸ö¸ºÔØ¼Ä´æÆ÷£¬¸ºÔğÔÚ²»Í¬ shader Ö®¼ä´«µİĞÅÏ¢¡£
-ºóÃæÎÒÃÇ»áÔÚ Raygen Shader ÖĞÉêÇëÒ»¸öÑÕÉ«Ö¸ÕëÀ´´æ´¢×îÖÕµÄ¹â×·ÑÕÉ«£¬µ±¿ªÊ¼ tracing ºó£¬
-»á½«Õâ¸öÑÕÉ«Ö¸Õë²ğ·Ö£¨pack£©Ğ´Èë0ºÅºÍ1ºÅ¼Ä´æÆ÷£¬µ± Hit Shader ºÍ Miss Shader ÏëÍùÀïÃæĞ´¶«Î÷Ê±£¬
-¾Í¿ÉÒÔÍ¨¹ıÉÏÃæ´úÂëÖĞµÄ getPRD º¯Êı»ñµÃ0ºÅºÍ1ºÅ¼Ä´æÆ÷ÖĞµÄÖµ£¬½«Æä unpack ±ãµÃµ½ÁËÄÇ¸öÑÕÉ«Ö¸Õë£¬
-È»ºó¾Í¿ÉÒÔÍùÕâ¸öÑÕÉ«Ö¸ÕëÀïĞ´ÄÚÈİÁË¡£
+unpackPainter å’Œ packPainter å°±æ˜¯å¯¹æŸä¸ªæŒ‡é’ˆä¸­ä¿å­˜çš„åœ°å€è¿›è¡Œé«˜32ä½å’Œä½32ä½çš„æ‹†åˆ†å’Œåˆå¹¶ã€‚
+ä¹‹æ‰€ä»¥éœ€è¦æ‹†åˆ†ï¼Œæ˜¯å› ä¸ºæˆ‘ä»¬çš„è®¡ç®—æœºæ˜¯64ä½çš„æ‰€ä»¥æŒ‡é’ˆä¹Ÿæ˜¯64ä½çš„ï¼Œç„¶è€Œgpuçš„å¯„å­˜å™¨æ˜¯32ä½çš„ï¼Œ
+å› æ­¤åªèƒ½å°†æŒ‡é’ˆæ‹†åˆ†æˆä¸¤éƒ¨åˆ†å­˜è¿›gpuçš„å¯„å­˜å™¨ã€‚
+è¿™é‡Œç®€å•è§£é‡Šä¸‹ payloadï¼Œpayload å°±ç±»ä¼¼ä¸€ä¸ªè´Ÿè½½å¯„å­˜å™¨ï¼Œè´Ÿè´£åœ¨ä¸åŒ shader ä¹‹é—´ä¼ é€’ä¿¡æ¯ã€‚
+åé¢æˆ‘ä»¬ä¼šåœ¨ Raygen Shader ä¸­ç”³è¯·ä¸€ä¸ªé¢œè‰²æŒ‡é’ˆæ¥å­˜å‚¨æœ€ç»ˆçš„å…‰è¿½é¢œè‰²ï¼Œå½“å¼€å§‹ tracing åï¼Œ
+ä¼šå°†è¿™ä¸ªé¢œè‰²æŒ‡é’ˆæ‹†åˆ†ï¼ˆpackï¼‰å†™å…¥0å·å’Œ1å·å¯„å­˜å™¨ï¼Œå½“ Hit Shader å’Œ Miss Shader æƒ³å¾€é‡Œé¢å†™ä¸œè¥¿æ—¶ï¼Œ
+å°±å¯ä»¥é€šè¿‡ä¸Šé¢ä»£ç ä¸­çš„ getPRD å‡½æ•°è·å¾—0å·å’Œ1å·å¯„å­˜å™¨ä¸­çš„å€¼ï¼Œå°†å…¶ unpack ä¾¿å¾—åˆ°äº†é‚£ä¸ªé¢œè‰²æŒ‡é’ˆï¼Œ
+ç„¶åå°±å¯ä»¥å¾€è¿™ä¸ªé¢œè‰²æŒ‡é’ˆé‡Œå†™å†…å®¹äº†ã€‚
 */
 static __forceinline__ __device__ void* unpackPointer(uint32_t i0, uint32_t i1) {
     const uint64_t uptr = static_cast<uint64_t>(i0) << 32 | i1;
@@ -88,7 +88,7 @@ extern "C" __global__ void __closesthit__radiance() {
     const vec3f& C = sbtData.vertex[index.z];
     vec3f Ng = cross(B - A, C - A);
     vec3f Ns = (sbtData.normal)
-        ? ((1.f - u - v) * sbtData.normal[index.x]
+        ? ((1.0f - u - v) * sbtData.normal[index.x]
             + u * sbtData.normal[index.y]
             + v * sbtData.normal[index.z])
         : Ng;
@@ -98,11 +98,19 @@ extern "C" __global__ void __closesthit__radiance() {
     // ------------------------------------------------------------------
     const vec3f rayDir = optixGetWorldRayDirection();
 
-    if (dot(rayDir, Ng) > 0.f) Ng = -Ng;
+    if (dot(rayDir, Ng) > 0.0f) {
+        Ng = -Ng;
+    }
     Ng = normalize(Ng);
 
-    if (dot(Ng, Ns) < 0.f)
-        Ns -= 2.f * dot(Ng, Ns) * Ng;
+    if (dot(Ng, Ns) < 0.0f) {
+        // å¦‚æœç€è‰²æ³•çº¿Nsçš„æ–¹å‘ä¸å‡ ä½•æ³•çº¿Ngçš„æ–¹å‘ç›¸åï¼ˆå³å¤¹è§’å°äº0ï¼‰ï¼Œ
+        // åˆ™éœ€è¦å¯¹Nsè¿›è¡Œä¿®æ­£ã€‚è¿™é‡Œä½¿ç”¨äº†å‡ ä½•æ³•çº¿Ngæ¥è®¡ç®—ç€è‰²æ³•çº¿Nsçš„åå°„æ–¹å‘ã€‚
+        // è¿™æ˜¯æ ¹æ®åå°„å®šå¾‹æ¥å®ç°çš„ï¼Œå³å…¥å°„è§’ç­‰äºåå°„è§’ã€‚
+        // è¿™ä¸ªå…¬å¼å®é™…ä¸Šæ˜¯å°†ç€è‰²æ³•çº¿Nsæ²¿ç€å‡ ä½•æ³•çº¿Ngçš„æ–¹å‘è¿›è¡Œåå°„ï¼Œ
+        // å¹¶å°†ç»“æœèµ‹ç»™Nsï¼Œä»¥ç¡®ä¿å…‰çº¿ä¸è¡¨é¢ç›¸äº¤æ—¶ï¼Œç€è‰²æ³•çº¿çš„æ–¹å‘æ˜¯æ­£ç¡®çš„ã€‚
+        Ns -= 2.0f * dot(Ng, Ns) * Ng;
+    }
     Ns = normalize(Ns);
 
     // ------------------------------------------------------------------
@@ -112,7 +120,7 @@ extern "C" __global__ void __closesthit__radiance() {
     vec3f diffuseColor = sbtData.color;
     if (sbtData.hasTexture && sbtData.texcoord) {
         const vec2f tc
-            = (1.f - u - v) * sbtData.texcoord[index.x]
+            = (1.0f - u - v) * sbtData.texcoord[index.x]
             + u * sbtData.texcoord[index.y]
             + v * sbtData.texcoord[index.z];
 
@@ -127,7 +135,7 @@ extern "C" __global__ void __closesthit__radiance() {
     // compute shadow
     // ------------------------------------------------------------------
     const vec3f surfPos
-        = (1.f - u - v) * sbtData.vertex[index.x]
+        = (1.0f - u - v) * sbtData.vertex[index.x]
         + u * sbtData.vertex[index.y]
         + v * sbtData.vertex[index.z];
 
@@ -144,8 +152,8 @@ extern "C" __global__ void __closesthit__radiance() {
 
         // trace shadow ray:
         const float NdotL = dot(lightDir, Ns);
-        if (NdotL >= 0.f) {
-            vec3f lightVisibility = 0.f;
+        if (NdotL >= 0.0f) {
+            vec3f lightVisibility = 0.0f;
             // the values we store the PRD pointer in:
             uint32_t u0, u1;
             packPointer(&lightVisibility, u0, u1);
@@ -153,7 +161,7 @@ extern "C" __global__ void __closesthit__radiance() {
                 surfPos + 1e-3f * Ng,
                 lightDir,
                 1e-3f,      // tmin
-                lightDist * (1.f - 1e-3f),  // tmax
+                lightDist * (1.0f - 1e-3f),  // tmax
                 0.0f,       // rayTime
                 OptixVisibilityMask(255),
                 // For shadow rays: skip any/closest hit shaders and terminate on first
@@ -194,15 +202,19 @@ extern "C" __global__ void __anyhit__shadow() { /*! not going to be used */
 // ------------------------------------------------------------------------------
 
 extern "C" __global__ void __miss__radiance() {
+    const vec3f rayDir = optixGetWorldRayDirection();
+    vec3f unit_direction = normalize(rayDir);
+    float t = 0.5f * (unit_direction.y + 1.0f);
+
     PRD& prd = *getPRD<PRD>();
-    // set to constant white as background color
-    prd.pixelColor = vec3f(1.f);
+    // background color
+    prd.pixelColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
 }
 
 extern "C" __global__ void __miss__shadow() {
     // we didn't hit anything, so the light is visible
     vec3f& prd = *(vec3f*)getPRD<vec3f>();
-    prd = vec3f(1.f);
+    prd = vec3f(1.0f);
 }
 
 //------------------------------------------------------------------------------
@@ -217,7 +229,7 @@ extern "C" __global__ void __raygen__renderFrame() {
     PRD prd;
     prd.random.init(ix + optixLaunchParams.frame.size.x * iy,
         optixLaunchParams.frame.frameID);
-    prd.pixelColor = vec3f(0.f);
+    prd.pixelColor = vec3f(0.0f);
 
     // the values we store the PRD pointer in:
     uint32_t u0, u1;
@@ -225,9 +237,9 @@ extern "C" __global__ void __raygen__renderFrame() {
 
     int numPixelSamples = optixLaunchParams.numPixelSamples;
 
-    vec3f pixelColor = 0.f;
-    vec3f pixelNormal = 0.f;
-    vec3f pixelAlbedo = 0.f;
+    vec3f pixelColor = 0.0f;
+    vec3f pixelNormal = 0.0f;
+    vec3f pixelAlbedo = 0.0f;
     for (int sampleID = 0; sampleID < numPixelSamples; sampleID++) {
         // normalized screen plane position, in [0,1]^2
 
@@ -268,9 +280,9 @@ extern "C" __global__ void __raygen__renderFrame() {
         pixelAlbedo += prd.pixelAlbedo;
     }
 
-    vec4f rgba(pixelColor / numPixelSamples, 1.f);
-    vec4f albedo(pixelAlbedo / numPixelSamples, 1.f);
-    vec4f normal(pixelNormal / numPixelSamples, 1.f);
+    vec4f rgba(pixelColor / numPixelSamples, 1.0f);
+    vec4f albedo(pixelAlbedo / numPixelSamples, 1.0f);
+    vec4f normal(pixelNormal / numPixelSamples, 1.0f);
 
     // and write/accumulate to frame buffer ...
     const uint32_t fbIndex = ix + iy * optixLaunchParams.frame.size.x;
@@ -278,7 +290,7 @@ extern "C" __global__ void __raygen__renderFrame() {
         rgba
             += float(optixLaunchParams.frame.frameID)
             * vec4f(optixLaunchParams.frame.colorBuffer[fbIndex]);
-        rgba /= (optixLaunchParams.frame.frameID + 1.f);
+        rgba /= (optixLaunchParams.frame.frameID + 1.0f);
     }
     optixLaunchParams.frame.colorBuffer[fbIndex] = (float4)rgba;
     optixLaunchParams.frame.albedoBuffer[fbIndex] = (float4)albedo;

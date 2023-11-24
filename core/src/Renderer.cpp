@@ -127,8 +127,8 @@ void Renderer::CreateTextures() {
 
 OptixTraversableHandle Renderer::BuildAccel() {
     /*
-    一个TriangleMesh就只能注册成一个物体 id，
-    一个物体id就只能绑定一个 Shader Record。
+    一个 TriangleMesh 就只能注册成一个物体 id，
+    一个物体 id 就只能绑定一个 Shader Record。
     只有一个 Shader Record 意味着大家都使用相同的 shader 实例和传入参数，
     那么大家都只能用相同材质了。
     因此，我们必须将不同材质的物体分离为多个模型。
@@ -280,8 +280,9 @@ void Renderer::InitOptix() {
     cudaFree(0);
     int numDevices;
     cudaGetDeviceCount(&numDevices);
-    if (numDevices == 0)
+    if (numDevices == 0) {
         throw std::runtime_error("no CUDA capable devices found!");
+    }
     std::cout << "found " << numDevices << " CUDA devices" << std::endl;
 
     // -------------------------------------------------------
@@ -435,7 +436,7 @@ void Renderer::CreateHitgroupPrograms() {
     size_t sizeof_log = sizeof(log);
 
     OptixProgramGroupOptions pgOptions = {};
-    OptixProgramGroupDesc    pgDesc = {};
+    OptixProgramGroupDesc pgDesc = {};
     pgDesc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
     pgDesc.hitgroup.moduleCH = module;
     pgDesc.hitgroup.moduleAH = module;

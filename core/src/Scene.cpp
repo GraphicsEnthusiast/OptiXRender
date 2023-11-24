@@ -25,6 +25,10 @@ void Scene::LoadMesh(const std::string& objFile) {
 	}
 }
 
+void Scene::AddLight(const Light& l) {
+	lights.emplace_back(l);
+}
+
 TriangleMesh::TriangleMesh(const std::string& objFile) {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
