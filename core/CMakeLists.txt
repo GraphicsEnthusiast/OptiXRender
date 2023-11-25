@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(OpenGL REQUIRED)
 
 add_library(core 
+    ./cuda/Utils.h
     ./include/LaunchParams.h
     ./include/Renderer.h
     ./include/Scene.h

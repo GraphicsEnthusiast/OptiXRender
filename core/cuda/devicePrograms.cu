@@ -1,7 +1,7 @@
 #include <optix_device.h>
 #include <cuda_runtime.h>
 
-#include "../include/LaunchParams.h"
+#include "Utils.h"
 #include "gdt/random/random.h"
 
 #define NUM_LIGHT_SAMPLES 4
@@ -29,28 +29,28 @@ unpackPainter 和 packPainter 就是对某个指针中保存的地址进行高32
 这里简单解释下 payload，payload 就类似一个负载寄存器，负责在不同 shader 之间传递信息。
 后面我们会在 Raygen Shader 中申请一个颜色指针来存储最终的光追颜色，当开始 tracing 后，
 会将这个颜色指针拆分（pack）写入0号和1号寄存器，当 Hit Shader 和 Miss Shader 想往里面写东西时，
-就可以通过上面代码中的 getPRD 函数获得0号和1号寄存器中的值，将其 unpack 便得到了那个颜色指针，
+就可以通过上面代码中的 GetPRD 函数获得0号和1号寄存器中的值，将其 unpack 便得到了那个颜色指针，
 然后就可以往这个颜色指针里写内容了。
 */
-static __forceinline__ __device__ void* unpackPointer(uint32_t i0, uint32_t i1) {
+static __forceinline__ __device__ void* UnPackPointer(uint32_t i0, uint32_t i1) {
     const uint64_t uptr = static_cast<uint64_t>(i0) << 32 | i1;
     void* ptr = reinterpret_cast<void*>(uptr);
 
     return ptr;
 }
 
-static __forceinline__ __device__ void packPointer(void* ptr, uint32_t& i0, uint32_t& i1) {
+static __forceinline__ __device__ void PackPointer(void* ptr, uint32_t& i0, uint32_t& i1) {
     const uint64_t uptr = reinterpret_cast<uint64_t>(ptr);
     i0 = uptr >> 32;
     i1 = uptr & 0x00000000ffffffff;
 }
 
 template<typename T>
-static __forceinline__ __device__ T* getPRD() {
+static __forceinline__ __device__ T* GetPRD() {
     const uint32_t u0 = optixGetPayload_0();
     const uint32_t u1 = optixGetPayload_1();
 
-    return reinterpret_cast<T*>(unpackPointer(u0, u1));
+    return reinterpret_cast<T*>(UnPackPointer(u0, u1));
 }
 
 //------------------------------------------------------------------------------
@@ -68,8 +68,8 @@ extern "C" __global__ void __closesthit__shadow() {
 }
 
 extern "C" __global__ void __closesthit__radiance() {
-    const TriangleMeshSBTData& sbtData = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
-    PRD& prd = *getPRD<PRD>();
+    const TriangleMeshSBTData & sbtData = *(const TriangleMeshSBTData *)optixGetSbtDataPointer();
+    PRD& prd = *GetPRD<PRD>();
 
     // ------------------------------------------------------------------
     // gather some basic hit information
@@ -139,52 +139,9 @@ extern "C" __global__ void __closesthit__radiance() {
         + u * sbtData.vertex[index.y]
         + v * sbtData.vertex[index.z];
 
-    const int numLightSamples = NUM_LIGHT_SAMPLES;
-    for (int lightSampleID = 0; lightSampleID < numLightSamples; lightSampleID++) {
-        // produce random light sample
-        const vec3f lightPos
-            = optixLaunchParams.light.origin
-            + prd.random() * optixLaunchParams.light.du
-            + prd.random() * optixLaunchParams.light.dv;
-        vec3f lightDir = lightPos - surfPos;
-        float lightDist = gdt::length(lightDir);
-        lightDir = normalize(lightDir);
-
-        // trace shadow ray:
-        const float NdotL = dot(lightDir, Ns);
-        if (NdotL >= 0.0f) {
-            vec3f lightVisibility = 0.0f;
-            // the values we store the PRD pointer in:
-            uint32_t u0, u1;
-            packPointer(&lightVisibility, u0, u1);
-            optixTrace(optixLaunchParams.traversable,
-                surfPos + 1e-3f * Ng,
-                lightDir,
-                1e-3f,      // tmin
-                lightDist * (1.0f - 1e-3f),  // tmax
-                0.0f,       // rayTime
-                OptixVisibilityMask(255),
-                // For shadow rays: skip any/closest hit shaders and terminate on first
-                // intersection with anything. The miss shader is used to mark if the
-                // light was visible.
-                OPTIX_RAY_FLAG_DISABLE_ANYHIT
-                | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
-                | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
-                SHADOW_RAY_TYPE,            // SBT offset
-                RAY_TYPE_COUNT,               // SBT stride
-                SHADOW_RAY_TYPE,            // missSBTIndex 
-                u0, u1);
-            pixelColor
-                += lightVisibility
-                * optixLaunchParams.light.power
-                * diffuseColor
-                * (NdotL / (lightDist * lightDist * numLightSamples));
-        }
-    }
-
     prd.pixelNormal = Ns;
     prd.pixelAlbedo = diffuseColor;
-    prd.pixelColor = pixelColor;
+    prd.pixelColor = (1.0f + Ns) * 0.5f;
 }
 
 extern "C" __global__ void __anyhit__radiance() { /*! for this simple example, this will remain empty */
@@ -206,14 +163,14 @@ extern "C" __global__ void __miss__radiance() {
     vec3f unit_direction = normalize(rayDir);
     float t = 0.5f * (unit_direction.y + 1.0f);
 
-    PRD& prd = *getPRD<PRD>();
+    PRD& prd = *GetPRD<PRD>();
     // background color
     prd.pixelColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
 }
 
 extern "C" __global__ void __miss__shadow() {
     // we didn't hit anything, so the light is visible
-    vec3f& prd = *(vec3f*)getPRD<vec3f>();
+    vec3f& prd = *(vec3f*)GetPRD<vec3f>();
     prd = vec3f(1.0f);
 }
 
@@ -233,7 +190,7 @@ extern "C" __global__ void __raygen__renderFrame() {
 
     // the values we store the PRD pointer in:
     uint32_t u0, u1;
-    packPointer(&prd, u0, u1);
+    PackPointer(&prd, u0, u1);
 
     int numPixelSamples = optixLaunchParams.numPixelSamples;
 
@@ -249,23 +206,19 @@ extern "C" __global__ void __raygen__renderFrame() {
         // rendreing is slightly larger than [0,1]^2
         vec2f screen(vec2f(ix + prd.random(), iy + prd.random())
             / vec2f(optixLaunchParams.frame.size));
-        // screen
-        //   = screen
-        //   * vec2f(optixLaunchParams.frame.denoisedSize)
-        //   * vec2f(optixLaunchParams.frame.size)
-        //   - 0.5f*(vec2f(optixLaunchParams.frame.size)
-        //           -
-        //           vec2f(optixLaunchParams.frame.denoisedSize)
-        //           );
 
         // generate ray direction
         vec3f rayDir = normalize(camera.direction
             + (screen.x - 0.5f) * camera.horizontal
             + (screen.y - 0.5f) * camera.vertical);
 
+        Ray ray;
+        ray.origin = camera.position;
+        ray.direction = rayDir;
+
         optixTrace(optixLaunchParams.traversable,
-            camera.position,
-            rayDir,
+            ray.origin,
+            ray.direction,
             0.f,    // tmin
             1e20f,  // tmax
             0.0f,   // rayTime

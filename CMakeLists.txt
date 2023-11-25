@@ -50,8 +50,8 @@ include_directories(${OptiX_INCLUDE})
 
 cuda_compile_and_embed(embedded_ptx_code core/cuda/devicePrograms.cu)
 
-cuda_add_library(toneMap
-  core/cuda/toneMap.cu)
+cuda_add_library(ToneMap
+  core/cuda/ToneMap.cu)
 
 add_executable(RTRT_Render
   ${embedded_ptx_code}
@@ -74,5 +74,5 @@ target_link_libraries(RTRT_Render
   glfWindow
   glfw
   ${OPENGL_gl_LIBRARY}
-  toneMap
+  ToneMap
 )
