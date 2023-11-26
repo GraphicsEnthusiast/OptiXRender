@@ -4,10 +4,19 @@
 #include "../include/LaunchParams.h"
 #include "math.h"
 
+#define EPS 1e-4f
 #define M_PIf 3.14159265358979323846f
 #define M_PI_2f 1.57079632679489661923f
 #define M_1_PIf	0.318309886183790671538f
 #define M_2PIf 6.28318530717958647692f
+
+__forceinline__ __device__ constexpr float sqr(float x) {
+    return x * x;
+}
+
+__forceinline__ __device__ vec3f reflect(const vec3f& v, const vec3f& n) {
+    return normalize(v - 2.0f * dot(v, n) * n);
+}
 
 struct Ray {
     vec3f origin;
@@ -15,53 +24,13 @@ struct Ray {
     float tmax = FLT_MAX;
 };
 
-__forceinline__ __device__ constexpr float Origin() { 
-    return 1.0f / 32.0f; 
-}
-
-__forceinline__ __device__ constexpr float FloatScale() { 
-    return 1.0f / 65536.0f; 
-}
-
-__forceinline__ __device__ constexpr float IntScale() { 
-    return 256.0f; 
-}
-
-__forceinline__ __device__ vec3f OffsetRay(const vec3f p, const vec3f n) {
-    int3 of_i = make_int3(IntScale() * n.x, IntScale() * n.y, IntScale() * n.z);
-
-    vec3f p_i(
-        float(int(p.x) + ((p.x < 0) ? -of_i.x : of_i.x)),
-        float(int(p.y) + ((p.y < 0) ? -of_i.y : of_i.y)),
-        float(int(p.z) + ((p.z < 0) ? - of_i.z : of_i.z)));
-
-    return vec3f(
-        fabsf(p.x) < Origin() ? p.x + FloatScale() * n.x : p_i.x,
-        fabsf(p.y) < Origin() ? p.y + FloatScale() * n.y : p_i.y,
-        fabsf(p.z) < Origin() ? p.z + FloatScale() * n.z : p_i.z);
-}
-
 struct Interaction {
-    vec3f V;
     float distance;
     vec3f position;
     vec3f geomNormal;
     vec3f shadeNormal;
+    bool frontFace;
     Material material;
-    
-    __forceinline__ __device__ Ray SpawnRay(const vec3f& L) const {
-        vec3f N = geomNormal;
-        if (dot(L, geomNormal) < 0.0f) {
-            N = -geomNormal;
-        }
-
-        Ray ray;
-        ray.origin = OffsetRay(position, N);
-        ray.direction = L;
-        ray.tmax = FLT_MAX;
-
-        return ray;
-    }
 };
 
 // 将单位向量从世界坐标系转换到局部坐标系

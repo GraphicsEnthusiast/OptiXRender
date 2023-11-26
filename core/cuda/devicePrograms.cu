@@ -19,13 +19,10 @@ extern "C" __constant__ LaunchParams optixLaunchParams;
 struct PRD {
     Random random;
     Interaction isect;
-    vec3f pixelColor;
-    vec3f pixelNormal;
-    vec3f pixelAlbedo;
 };
 
 /* 
-UnpackPainter 和 PackPainter 就是对某个指针中保存的地址进行高32位和低32位的拆分和合并。
+UnpackPointer 和 PackPointer 就是对某个指针中保存的地址进行高32位和低32位的拆分和合并。
 之所以需要拆分，是因为我们的计算机是64位的所以指针也是64位的，然而gpu的寄存器是32位的，
 因此只能将指针拆分成两部分存进gpu的寄存器。
 这里简单解释下 payload，payload 就类似一个负载寄存器，负责在不同 shader 之间传递信息。
@@ -100,8 +97,10 @@ extern "C" __global__ void __closesthit__radiance() {
     // ------------------------------------------------------------------
     const vec3f rayDir = optixGetWorldRayDirection();
 
+    prd.isect.frontFace = true;
     if (dot(rayDir, Ng) > 0.0f) {
         Ng = -Ng;
+        prd.isect.frontFace = false;
     }
     Ng = normalize(Ng);
 
@@ -111,7 +110,7 @@ extern "C" __global__ void __closesthit__radiance() {
         // 这是根据反射定律来实现的，即入射角等于反射角。
         // 这个公式实际上是将着色法线Ns沿着几何法线Ng的方向进行反射，
         // 并将结果赋给Ns，以确保光线与表面相交时，着色法线的方向是正确的。
-        Ns -= 2.0f * dot(Ng, Ns) * Ng;
+        Ns = reflect(Ns, Ng);
     }
     Ns = normalize(Ns);
 
@@ -130,18 +129,12 @@ extern "C" __global__ void __closesthit__radiance() {
         albedoColor = (vec3f)fromTexture;
     }
 
-    // ------------------------------------------------------------------
-    // compute shadow
-    // ------------------------------------------------------------------
     const vec3f surfPos
         = (1.0f - u - v) * sbtData.vertex[index.x]
         + u * sbtData.vertex[index.y]
         + v * sbtData.vertex[index.z];
     
-    prd.pixelNormal = Ns;
-    prd.pixelAlbedo = albedoColor;
-    prd.pixelColor = (1.0f + Ns) * 0.5f;
-    prd.isect.V = -rayDir;
+    prd.isect.distance = length(surfPos - prd.isect.position);
     prd.isect.position = surfPos;
     prd.isect.geomNormal = Ng;
     prd.isect.shadeNormal = Ns;
@@ -164,10 +157,6 @@ extern "C" __global__ void __anyhit__shadow() { /*! not going to be used */
 
 extern "C" __global__ void __miss__radiance() {
     PRD& prd = *GetPRD<PRD>();
-
-    prd.pixelColor = 0.0f;
-    prd.pixelAlbedo = 0.0f;
-    prd.pixelNormal = 0.0f;
     prd.isect.distance = FLT_MAX;
 }
 
@@ -189,7 +178,6 @@ extern "C" __global__ void __raygen__renderFrame() {
     PRD prd;
     prd.random.init(ix + optixLaunchParams.frame.size.x * iy,
         optixLaunchParams.frame.frameID);
-    prd.pixelColor = vec3f(0.0f);
 
     // the values we store the PRD pointer in:
     uint32_t u0, u1;
@@ -219,26 +207,23 @@ extern "C" __global__ void __raygen__renderFrame() {
         ray.origin = camera.position;
         ray.direction = rayDir;
 
-        vec3f radiance = 0.0f;
-        vec3f history = 1.0f;
+        vec3f radiance(0.0f);
+	    vec3f history(1.0f);
+	    vec3f V = -ray.direction;
+	    vec3f L = ray.direction;
+        float bsdf_pdf = 0.0f;
+        vec3f bsdf = 0.0f;
 
-        for(int bounce = 0; ; bounce++) {
-            if (bounce >= optixLaunchParams.maxBounce) {
-                radiance = 0.0f;
+        prd.isect.distance = 0.0f;
+        prd.isect.position = ray.origin;
 
-                break;
-            }
-
-            Interaction isect;
-            isect.distance = 0.0f;
-            isect.V = -rayDir;
-            prd.isect = isect;
+        for(int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
             optixTrace(optixLaunchParams.traversable,
                 ray.origin,
                 ray.direction,
-                0.f,    // tmin
-                1e20f,  // tmax
-                0.0f,   // rayTime
+                EPS,     // tmin
+                ray.tmax,// tmax
+                0.0f,    // rayTime
                 OptixVisibilityMask(255),
                 OPTIX_RAY_FLAG_DISABLE_ANYHIT,// OPTIX_RAY_FLAG_NONE,
                 RADIANCE_RAY_TYPE,            // SBT offset
@@ -247,7 +232,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                 u0, u1);
 
             if (prd.isect.distance == FLT_MAX) {
-                vec3f unit_direction = normalize(-prd.isect.V);
+                vec3f unit_direction = normalize(-V);
                 float t = 0.5f * (unit_direction.y + 1.0f);
                 vec3f backColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
                 radiance += backColor * history;
@@ -255,19 +240,20 @@ extern "C" __global__ void __raygen__renderFrame() {
                 break;
             }
 
-            if(prd.isect.material.type == MaterialType::DIFFUSE) {
-                vec3f L;
-                float pdf;
-                vec3f brdf = SampleDiffuse(prd.isect, vec2f(prd.random(), prd.random()), prd.isect.V, L, pdf);
-                history *= brdf * abs(dot(prd.isect.shadeNormal, L)) / pdf;
-                ray = isect.SpawnRay(L);
+            if(prd.isect.material.type == MaterialType::Diffuse) {
+                bsdf = SampleDiffuse(prd.isect, vec2f(prd.random(), prd.random()), V, L, bsdf_pdf);
+            }
+            else if(prd.isect.material.type == MaterialType::Conductor) {
+                bsdf = SampleConductor(prd.isect, vec2f(prd.random(), prd.random()), V, L, bsdf_pdf);
             }
 
-            if(bounce == 0) {
-                pixelNormal += prd.pixelNormal;
-                pixelAlbedo += prd.pixelAlbedo;
-            }
+            history *= bsdf * abs(dot(prd.isect.shadeNormal, L)) / bsdf_pdf;
+
+            V = -L;
+            ray.origin = prd.isect.position;
+            ray.direction = L;
         }
+        
         pixelColor += radiance;
     }
 

@@ -7,6 +7,7 @@ find_package(OpenGL REQUIRED)
 add_library(core 
     ./cuda/Utils.h
     ./cuda/Sampling.h
+    ./cuda/Microfacet.h
     ./cuda/Material.h
     ./include/LaunchParams.h
     ./include/Renderer.h

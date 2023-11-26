@@ -16,15 +16,28 @@ struct Camera {
 };
 
 enum MaterialType {
-    DIFFUSE
+    Diffuse,
+    Conductor,
+    Dielectric
 };
 
 struct Material {
-    MaterialType type = MaterialType::DIFFUSE;
+    MaterialType type = MaterialType::Conductor;
 
-    vec3f albedo = 0.5f;
+    vec3f albedo = 1.0f;
     int albedoTextureID = -1;
     cudaTextureObject_t albedo_texture;
+
+    float roughness = 0.1f;
+    int roughnessTextureID = -1;
+    cudaTextureObject_t roughness_texture;
+
+    float anisotropy = 0.0f;
+    int anisotropyTextureID = -1;
+    cudaTextureObject_t anisotropy_texture;
+
+    vec3f eta{ 0.14282f, 0.37414f, 1.43944f };
+	vec3f k{ 3.97472f, 2.38066f, 1.59981f };
 
     vec3f emitter = 0.0f;
 };
