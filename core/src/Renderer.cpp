@@ -69,7 +69,7 @@ Renderer::Renderer(const Scene* scene) : scene(scene) {
     std::cout << "context, module, pipeline, etc, all set up ..." << std::endl;
 
     std::cout << GDT_TERMINAL_GREEN;
-    std::cout << "Optix 7 Sample fully set up" << std::endl;
+    std::cout << "RTRT_Render fully set up" << std::endl;
     std::cout << GDT_TERMINAL_DEFAULT;
 }
 
@@ -80,7 +80,7 @@ void Renderer::CreateTextures() {
     textureObjects.resize(numTextures);
 
     for (int textureID = 0; textureID < numTextures; textureID++) {
-        auto texture = scene ->textures[textureID];
+        auto texture = scene->textures[textureID];
 
         cudaResourceDesc res_desc = {};
 
@@ -567,15 +567,11 @@ void Renderer::BuildSBT() {
 
             HitgroupRecord rec;
             OPTIX_CHECK(optixSbtRecordPackHeader(hitgroupPGs[rayID], &rec));
-            rec.data.color = mesh->diffuse;
-            if (mesh->diffuseTextureID >= 0 && mesh->diffuseTextureID < textureObjects.size()) {
-                rec.data.hasTexture = true;
-                rec.data.texture = textureObjects[mesh->diffuseTextureID];
+            rec.data.material = mesh->material;
+            if (rec.data.material.albedoTextureID != -1) {
+                rec.data.material.albedo_texture = textureObjects[rec.data.material.albedoTextureID];
             }
-            else {
-                rec.data.hasTexture = false;
-            }
-            rec.data.index = (vec3i*)indexBuffer[meshID].d_pointer();
+            rec.data.index = (vec3i *)indexBuffer[meshID].d_pointer();
             rec.data.vertex = (vec3f*)vertexBuffer[meshID].d_pointer();
             rec.data.normal = (vec3f*)normalBuffer[meshID].d_pointer();
             rec.data.texcoord = (vec2f*)texcoordBuffer[meshID].d_pointer();

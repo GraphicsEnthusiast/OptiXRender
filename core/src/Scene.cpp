@@ -118,8 +118,7 @@ TriangleMesh::TriangleMesh(const std::string& objFile) {
 			int index = this->index.size();
 			this->index.emplace_back(vec3i(3 * index, 3 * index + 1, 3 * index + 2));
 
-			this->diffuse = vec3f(0.5f);
-			this->diffuseTextureID = -1;
+			this ->material = Material();
 
 			index_offset += fv;
 		}

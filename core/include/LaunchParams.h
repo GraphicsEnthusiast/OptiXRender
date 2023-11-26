@@ -2,6 +2,7 @@
 
 #include "gdt/math/vec.h"
 #include "optix7.h"
+#include "Scene.h"
 
 using namespace gdt;
 
@@ -13,17 +14,17 @@ enum {
 };
 
 struct TriangleMeshSBTData {
-    vec3f color;
     vec3f* vertex;
     vec3f* normal;
     vec2f* texcoord;
     vec3i* index;
-    bool hasTexture;
-    cudaTextureObject_t texture;
+    
+    Material material;
 };
   
 struct LaunchParams {
     int numPixelSamples = 1;
+    int maxBounce = 3;
     struct {
       int frameID = 0;
       float4* colorBuffer;

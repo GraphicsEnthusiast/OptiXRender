@@ -42,11 +42,13 @@ __forceinline__ __device__ vec3f OffsetRay(const vec3f p, const vec3f n) {
 }
 
 struct Interaction {
-    float bias = 0.001f;
+    vec3f V;
     float distance;
     vec3f position;
     vec3f geomNormal;
-    vec3f mat_color;
+    vec3f shadeNormal;
+    Material material;
+    
     __forceinline__ __device__ Ray SpawnRay(const vec3f& L) const {
         vec3f N = geomNormal;
         if (dot(L, geomNormal) < 0.0f) {

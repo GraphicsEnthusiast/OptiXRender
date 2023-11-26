@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 
 #include "Utils.h"
+#include "Material.h"
 #include "gdt/random/random.h"
 
 #define NUM_LIGHT_SAMPLES 4
@@ -17,13 +18,14 @@ extern "C" __constant__ LaunchParams optixLaunchParams;
     can access RNG state */
 struct PRD {
     Random random;
+    Interaction isect;
     vec3f pixelColor;
     vec3f pixelNormal;
     vec3f pixelAlbedo;
 };
 
 /* 
-unpackPainter 和 packPainter 就是对某个指针中保存的地址进行高32位和低32位的拆分和合并。
+UnpackPainter 和 PackPainter 就是对某个指针中保存的地址进行高32位和低32位的拆分和合并。
 之所以需要拆分，是因为我们的计算机是64位的所以指针也是64位的，然而gpu的寄存器是32位的，
 因此只能将指针拆分成两部分存进gpu的寄存器。
 这里简单解释下 payload，payload 就类似一个负载寄存器，负责在不同 shader 之间传递信息。
@@ -68,7 +70,7 @@ extern "C" __global__ void __closesthit__shadow() {
 }
 
 extern "C" __global__ void __closesthit__radiance() {
-    const TriangleMeshSBTData & sbtData = *(const TriangleMeshSBTData *)optixGetSbtDataPointer();
+    const TriangleMeshSBTData& sbtData = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
     PRD& prd = *GetPRD<PRD>();
 
     // ------------------------------------------------------------------
@@ -117,19 +119,16 @@ extern "C" __global__ void __closesthit__radiance() {
     // compute diffuse material color, including diffuse texture, if
     // available
     // ------------------------------------------------------------------
-    vec3f diffuseColor = sbtData.color;
-    if (sbtData.hasTexture && sbtData.texcoord) {
+    vec3f albedoColor = sbtData.material.albedo;
+    if (sbtData.texcoord) {
         const vec2f tc
             = (1.0f - u - v) * sbtData.texcoord[index.x]
             + u * sbtData.texcoord[index.y]
             + v * sbtData.texcoord[index.z];
 
-        vec4f fromTexture = tex2D<float4>(sbtData.texture, tc.x, tc.y);
-        diffuseColor *= (vec3f)fromTexture;
+        vec4f fromTexture = tex2D<float4>(sbtData.material.albedo_texture, tc.x, tc.y);
+        albedoColor = (vec3f)fromTexture;
     }
-
-    // start with some ambient term
-    vec3f pixelColor = (0.1f + 0.2f * fabsf(dot(Ns, rayDir))) * diffuseColor;
 
     // ------------------------------------------------------------------
     // compute shadow
@@ -138,10 +137,15 @@ extern "C" __global__ void __closesthit__radiance() {
         = (1.0f - u - v) * sbtData.vertex[index.x]
         + u * sbtData.vertex[index.y]
         + v * sbtData.vertex[index.z];
-
+    
     prd.pixelNormal = Ns;
-    prd.pixelAlbedo = diffuseColor;
+    prd.pixelAlbedo = albedoColor;
     prd.pixelColor = (1.0f + Ns) * 0.5f;
+    prd.isect.V = -rayDir;
+    prd.isect.position = surfPos;
+    prd.isect.geomNormal = Ng;
+    prd.isect.shadeNormal = Ns;
+    prd.isect.material = sbtData.material;
 }
 
 extern "C" __global__ void __anyhit__radiance() { /*! for this simple example, this will remain empty */
@@ -159,13 +163,12 @@ extern "C" __global__ void __anyhit__shadow() { /*! not going to be used */
 // ------------------------------------------------------------------------------
 
 extern "C" __global__ void __miss__radiance() {
-    const vec3f rayDir = optixGetWorldRayDirection();
-    vec3f unit_direction = normalize(rayDir);
-    float t = 0.5f * (unit_direction.y + 1.0f);
-
     PRD& prd = *GetPRD<PRD>();
-    // background color
-    prd.pixelColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
+
+    prd.pixelColor = 0.0f;
+    prd.pixelAlbedo = 0.0f;
+    prd.pixelNormal = 0.0f;
+    prd.isect.distance = FLT_MAX;
 }
 
 extern "C" __global__ void __miss__shadow() {
@@ -216,21 +219,56 @@ extern "C" __global__ void __raygen__renderFrame() {
         ray.origin = camera.position;
         ray.direction = rayDir;
 
-        optixTrace(optixLaunchParams.traversable,
-            ray.origin,
-            ray.direction,
-            0.f,    // tmin
-            1e20f,  // tmax
-            0.0f,   // rayTime
-            OptixVisibilityMask(255),
-            OPTIX_RAY_FLAG_DISABLE_ANYHIT,//OPTIX_RAY_FLAG_NONE,
-            RADIANCE_RAY_TYPE,            // SBT offset
-            RAY_TYPE_COUNT,               // SBT stride
-            RADIANCE_RAY_TYPE,            // missSBTIndex 
-            u0, u1);
-        pixelColor += prd.pixelColor;
-        pixelNormal += prd.pixelNormal;
-        pixelAlbedo += prd.pixelAlbedo;
+        vec3f radiance = 0.0f;
+        vec3f history = 1.0f;
+
+        for(int bounce = 0; ; bounce++) {
+            if (bounce >= optixLaunchParams.maxBounce) {
+                radiance = 0.0f;
+
+                break;
+            }
+
+            Interaction isect;
+            isect.distance = 0.0f;
+            isect.V = -rayDir;
+            prd.isect = isect;
+            optixTrace(optixLaunchParams.traversable,
+                ray.origin,
+                ray.direction,
+                0.f,    // tmin
+                1e20f,  // tmax
+                0.0f,   // rayTime
+                OptixVisibilityMask(255),
+                OPTIX_RAY_FLAG_DISABLE_ANYHIT,// OPTIX_RAY_FLAG_NONE,
+                RADIANCE_RAY_TYPE,            // SBT offset
+                RAY_TYPE_COUNT,               // SBT stride
+                RADIANCE_RAY_TYPE,            // missSBTIndex 
+                u0, u1);
+
+            if (prd.isect.distance == FLT_MAX) {
+                vec3f unit_direction = normalize(-prd.isect.V);
+                float t = 0.5f * (unit_direction.y + 1.0f);
+                vec3f backColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
+                radiance += backColor * history;
+
+                break;
+            }
+
+            if(prd.isect.material.type == MaterialType::DIFFUSE) {
+                vec3f L;
+                float pdf;
+                vec3f brdf = SampleDiffuse(prd.isect, vec2f(prd.random(), prd.random()), prd.isect.V, L, pdf);
+                history *= brdf * abs(dot(prd.isect.shadeNormal, L)) / pdf;
+                ray = isect.SpawnRay(L);
+            }
+
+            if(bounce == 0) {
+                pixelNormal += prd.pixelNormal;
+                pixelAlbedo += prd.pixelAlbedo;
+            }
+        }
+        pixelColor += radiance;
     }
 
     vec4f rgba(pixelColor / numPixelSamples, 1.0f);
@@ -240,8 +278,7 @@ extern "C" __global__ void __raygen__renderFrame() {
     // and write/accumulate to frame buffer ...
     const uint32_t fbIndex = ix + iy * optixLaunchParams.frame.size.x;
     if (optixLaunchParams.frame.frameID > 0) {
-        rgba
-            += float(optixLaunchParams.frame.frameID)
+        rgba += float(optixLaunchParams.frame.frameID)
             * vec4f(optixLaunchParams.frame.colorBuffer[fbIndex]);
         rgba /= (optixLaunchParams.frame.frameID + 1.0f);
     }
