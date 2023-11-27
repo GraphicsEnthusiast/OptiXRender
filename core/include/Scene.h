@@ -22,7 +22,7 @@ enum MaterialType {
 };
 
 struct Material {
-    MaterialType type = MaterialType::Conductor;
+    MaterialType type = MaterialType::Dielectric;
 
     vec3f albedo = 1.0f;
     int albedoTextureID = -1;
@@ -38,6 +38,9 @@ struct Material {
 
     vec3f eta{ 0.14282f, 0.37414f, 1.43944f };
 	vec3f k{ 3.97472f, 2.38066f, 1.59981f };
+
+    float int_ior = 1.5f;
+    float ext_ior = 1.0f;
 
     vec3f emitter = 0.0f;
 };

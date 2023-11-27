@@ -3,11 +3,8 @@
 
 #include "Utils.h"
 #include "Material.h"
-#include "gdt/random/random.h"
 
 #define NUM_LIGHT_SAMPLES 4
-
-typedef gdt::LCG<16> Random;
 
 /*! launch parameters in constant memory, filled in by optix upon
     optixLaunch (this gets filled in from the buffer we pass to
@@ -96,24 +93,6 @@ extern "C" __global__ void __closesthit__radiance() {
     // face-forward and normalize normals
     // ------------------------------------------------------------------
     const vec3f rayDir = optixGetWorldRayDirection();
-
-    prd.isect.frontFace = true;
-    if (dot(rayDir, Ng) > 0.0f) {
-        Ng = -Ng;
-        prd.isect.frontFace = false;
-    }
-    Ng = normalize(Ng);
-
-    if (dot(Ng, Ns) < 0.0f) {
-        // 如果着色法线Ns的方向与几何法线Ng的方向相反（即夹角小于0），
-        // 则需要对Ns进行修正。这里使用了几何法线Ng来计算着色法线Ns的反射方向。
-        // 这是根据反射定律来实现的，即入射角等于反射角。
-        // 这个公式实际上是将着色法线Ns沿着几何法线Ng的方向进行反射，
-        // 并将结果赋给Ns，以确保光线与表面相交时，着色法线的方向是正确的。
-        Ns = reflect(Ns, Ng);
-    }
-    Ns = normalize(Ns);
-
     // ------------------------------------------------------------------
     // compute diffuse material color, including diffuse texture, if
     // available
@@ -134,10 +113,9 @@ extern "C" __global__ void __closesthit__radiance() {
         + u * sbtData.vertex[index.y]
         + v * sbtData.vertex[index.z];
     
+    prd.isect.SetFaceNormal(rayDir, Ns);
     prd.isect.distance = length(surfPos - prd.isect.position);
     prd.isect.position = surfPos;
-    prd.isect.geomNormal = Ng;
-    prd.isect.shadeNormal = Ns;
     prd.isect.material = sbtData.material;
 }
 
@@ -241,13 +219,20 @@ extern "C" __global__ void __raygen__renderFrame() {
             }
 
             if(prd.isect.material.type == MaterialType::Diffuse) {
-                bsdf = SampleDiffuse(prd.isect, vec2f(prd.random(), prd.random()), V, L, bsdf_pdf);
+                bsdf = SampleDiffuse(prd.isect, prd.random, V, L, bsdf_pdf);
             }
             else if(prd.isect.material.type == MaterialType::Conductor) {
-                bsdf = SampleConductor(prd.isect, vec2f(prd.random(), prd.random()), V, L, bsdf_pdf);
+                bsdf = SampleConductor(prd.isect, prd.random, V, L, bsdf_pdf);
+            }
+            else if(prd.isect.material.type == MaterialType::Dielectric) {
+                bsdf = SampleDielectric(prd.isect, prd.random, V, L, bsdf_pdf);
             }
 
-            history *= bsdf * abs(dot(prd.isect.shadeNormal, L)) / bsdf_pdf;
+            float costheta = abs(dot(prd.isect.shadeNormal, L));
+            if(!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
+                break;
+            }
+            history *= bsdf * costheta / bsdf_pdf;
 
             V = -L;
             ray.origin = prd.isect.position;

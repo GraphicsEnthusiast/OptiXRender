@@ -10,12 +10,20 @@
 #define M_1_PIf	0.318309886183790671538f
 #define M_2PIf 6.28318530717958647692f
 
-__forceinline__ __device__ constexpr float sqr(float x) {
+__forceinline__ __device__ float sqr(float x) {
     return x * x;
 }
 
 __forceinline__ __device__ vec3f reflect(const vec3f& v, const vec3f& n) {
     return normalize(v - 2.0f * dot(v, n) * n);
+}
+
+__forceinline__ __device__  vec3f refract(const vec3f& v, const vec3f& n, float etai_over_etat) {
+    float cos_theta = min(dot(-v, n), 1.0f);
+    vec3f r_out_perp =  etai_over_etat * (v + cos_theta * n);
+    vec3f r_out_parallel = -sqrt(abs(1.0f - dot(r_out_perp, r_out_perp))) * n;
+
+    return normalize(r_out_perp + r_out_parallel);
 }
 
 struct Ray {
@@ -27,11 +35,23 @@ struct Ray {
 struct Interaction {
     float distance;
     vec3f position;
-    vec3f geomNormal;
     vec3f shadeNormal;
     bool frontFace;
     Material material;
+
+	__forceinline__ __device__  void SetFaceNormal(const vec3f& dir, const vec3f& outward_normal) {
+        frontFace = dot(dir, outward_normal) < 0.0f;
+        shadeNormal = frontFace ? outward_normal : -outward_normal;
+    }
 };
+
+__forceinline__ __device__ bool IsValid(float value) {
+	if (isnan(value) || value < EPS) {
+		return false;
+	}
+
+	return true;
+}
 
 // 将单位向量从世界坐标系转换到局部坐标系
 // dir 待转换的单位向量
