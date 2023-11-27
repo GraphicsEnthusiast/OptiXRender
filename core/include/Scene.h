@@ -18,13 +18,14 @@ struct Camera {
 enum MaterialType {
     Diffuse,
     Conductor,
-    Dielectric
+    Dielectric,
+    Plastic
 };
 
 struct Material {
-    MaterialType type = MaterialType::Dielectric;
+    MaterialType type = MaterialType::Plastic;
 
-    vec3f albedo = 1.0f;
+    vec3f albedo = 0.5f;
     int albedoTextureID = -1;
     cudaTextureObject_t albedo_texture;
 
@@ -41,6 +42,12 @@ struct Material {
 
     float int_ior = 1.5f;
     float ext_ior = 1.0f;
+
+    bool nonlinear = true;
+
+    vec3f specular = 1.0f;
+    int specularTextureID = -1;
+    cudaTextureObject_t specular_texture;
 
     vec3f emitter = 0.0f;
 };

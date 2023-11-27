@@ -571,6 +571,15 @@ void Renderer::BuildSBT() {
             if (rec.data.material.albedoTextureID != -1) {
                 rec.data.material.albedo_texture = textureObjects[rec.data.material.albedoTextureID];
             }
+            if (rec.data.material.roughnessTextureID != -1) {
+                rec.data.material.roughness_texture = textureObjects[rec.data.material.roughnessTextureID];
+            }
+            if (rec.data.material.anisotropyTextureID != -1) {
+                rec.data.material.anisotropy_texture = textureObjects[rec.data.material.anisotropyTextureID];
+            }
+            if (rec.data.material.specularTextureID != -1) {
+                rec.data.material.specular_texture = textureObjects[rec.data.material.specularTextureID];
+            }
             rec.data.index = (vec3i *)indexBuffer[meshID].d_pointer();
             rec.data.vertex = (vec3f*)vertexBuffer[meshID].d_pointer();
             rec.data.normal = (vec3f*)normalBuffer[meshID].d_pointer();

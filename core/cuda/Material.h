@@ -9,19 +9,27 @@ typedef gdt::LCG<16> Random;
 //*************************************diffuse*************************************
 __forceinline__ __device__ vec3f EvaluateDiffuse(const Interaction& isect, 
     const vec3f& world_V, const vec3f& world_L, float& pdf) {
-	vec3f local_L = ToLocal(isect.shadeNormal, world_L);
+	vec3f local_L = ToLocal(world_L, isect.shadeNormal);
 	float NdotL = local_L.z;
 	pdf = CosinePdfHemisphere(NdotL);
+	if(NdotL <= 0.0f) {
+		return 0.0f;
+	}
 
-	return isect.material.albedo * M_1_PIf;
+	vec3f brdf = isect.material.albedo * M_1_PIf;
+
+	return brdf;
 }
 
 __forceinline__ __device__ vec3f SampleDiffuse(const Interaction& isect, Random& random,
 	const vec3f& world_V, vec3f& world_L, float& pdf) {
 	vec3f local_L = CosineSampleHemisphere(vec2f(random(), random()));
-	world_L = ToWorld(isect.shadeNormal, local_L);
+	world_L = ToWorld(local_L, isect.shadeNormal);
 	float NdotL = local_L.z;
 	pdf = CosinePdfHemisphere(NdotL);
+	if(NdotL <= 0.0f) {
+		return 0.0f;
+	}
 
 	vec3f brdf = isect.material.albedo * M_1_PIf;
 
@@ -44,9 +52,6 @@ __forceinline__ __device__ vec3f EvaluateConductor(const Interaction& isect,
 	vec3f V = world_V;
 	vec3f L = world_L;
 	vec3f H = normalize(V + L);
-	if(dot(N, H) < 0.0f) {
-		H = -H;
-	}
 
 	float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
 	pdf = Dv * abs(1.0f / (4.0f * dot(V, H)));
@@ -123,9 +128,6 @@ __forceinline__ __device__ vec3f EvaluateDielectric(const Interaction& isect,
 	bool isReflect = dot(N, L) * dot(N, V) > 0.0f;
 	if(isReflect){
         H = normalize(V + L);
-		if(dot(N, H) < 0.0f) {
-		    H = -H;
-	    }
 	}
 	else{
 		H = -normalize(etai_over_etat * V + L);
@@ -179,9 +181,6 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 	vec3f V = world_V;
 	vec3f H = SampleVisibleGGX(N, V, alpha_u, alpha_v, vec2f(random(), random()));
 	H = ToWorld(H, N);
-	if (dot(N, H) < 0.0f) {
-		H = -H;
-	}
 
     vec3f bsdf = 0.0f;
 	float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
@@ -233,3 +232,137 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 	return bsdf;
 }
 //*************************************dielectric*************************************
+
+//*************************************plastic*************************************
+__forceinline__ __device__ vec3f EvaluatePlastic(const Interaction& isect, 
+    const vec3f& world_V, const vec3f& world_L, float& pdf) {
+    const vec3f kd = isect.material.albedo,
+		ks = isect.material.specular;
+	const float d_sum = kd.x + kd.y + kd.z,
+		s_sum = ks.x + ks.y + ks.z;
+
+	float roughness = isect.material.roughness;
+	float aniso = isect.material.anisotropy;
+	float alpha_u = sqr(roughness) * (1.0f + aniso);
+	float alpha_v = sqr(roughness) * (1.0f - aniso);
+	float eta = isect.material.int_ior / isect.material.ext_ior;
+	bool nonlinear = isect.material.nonlinear;
+	float fdr = AverageFresnelDielectric(eta);
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+	vec3f L = world_L;
+	vec3f H = normalize(V + L);
+
+	float NdotV = dot(N, V);
+	float NdotL = dot(N, L);
+	if(NdotV <= 0.0f || NdotL <= 0.0f) {
+		return 0.0f;
+	}
+    
+	float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
+	float Fo = FresnelDielectric(V, N, 1.0f / eta),
+		Fi = FresnelDielectric(L, N, 1.0f / eta),
+		specular_sampling_weight = s_sum / (s_sum + d_sum),
+		pdf_specular = Fi * specular_sampling_weight,
+		pdf_diffuse = (1.0f - Fi) * (1.0f - specular_sampling_weight);
+	pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+	
+	vec3f F = FresnelDielectric(L, H, 1.0f / eta);
+	float D = DistributionGGX(H, N, alpha_u, alpha_v);
+	float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
+
+    vec3f brdf = 0.0f;
+	vec3f diffuse = kd, specular = ks;
+	if (nonlinear) {
+		brdf = diffuse / (1.0f - diffuse * fdr);
+	}
+	else {
+		brdf = diffuse / (1.0f - fdr);
+	}
+	brdf *= (1.0f - Fi) * (1.0f - Fo) * M_1_PIf;
+	brdf += specular * F * D * G / (4.0f * NdotL * NdotV);
+	
+	pdf = pdf_specular * Dv * abs(1.0f / (4.0f * dot(V, H))) + (1.0f - pdf_specular) * CosinePdfHemisphere(NdotL);
+
+	return brdf;
+}
+
+__forceinline__ __device__ vec3f SamplePlastic(const Interaction& isect, Random& random,
+	const vec3f& world_V, vec3f& world_L, float& pdf) {
+    const vec3f kd = isect.material.albedo,
+		ks = isect.material.specular;
+	const float d_sum = kd.x + kd.y + kd.z,
+		s_sum = ks.x + ks.y + ks.z;
+
+	float roughness = isect.material.roughness;
+	float aniso = isect.material.anisotropy;
+	float alpha_u = sqr(roughness) * (1.0f + aniso);
+	float alpha_v = sqr(roughness) * (1.0f - aniso);
+	float eta = isect.material.int_ior / isect.material.ext_ior;
+	bool nonlinear = isect.material.nonlinear;
+	float fdr = AverageFresnelDielectric(eta);
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+
+	float NdotV = dot(N, V);
+	if(NdotV <= 0.0f) {
+		return 0.0f;
+	}
+    
+	float Fo = FresnelDielectric(V, N, 1.0f / eta),
+		Fi = Fo,
+		specular_sampling_weight = s_sum / (s_sum + d_sum),
+		pdf_specular = Fi * specular_sampling_weight,
+		pdf_diffuse = (1.0f - Fi) * (1.0f - specular_sampling_weight);
+	pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+
+	vec3f brdf = 0.0f;
+	vec3f L = 0.0f;
+	vec3f H = 0.0f;
+	float NdotL = 0.0f;
+	if (random() < pdf_specular) {
+        H = SampleVisibleGGX(N, V, alpha_u, alpha_v, vec2f(random(), random()));
+	    H = ToWorld(H, N);
+
+		world_L = reflect(-V, H);
+		L = world_L;
+
+		NdotL = dot(N, L);
+		if (NdotL <= 0.0f) {
+			return 0.0f;
+		}
+	}
+	else { //从漫反射分量抽样光线方向
+		vec3f local_L = CosineSampleHemisphere(vec2f(random(), random()));
+	    world_L = ToWorld(local_L, N);
+		L = world_L;
+		H = normalize(V + L);
+		Fi = FresnelDielectric(L, N, 1.0f / eta);
+
+		NdotL = dot(N, L);
+		if (NdotL <= 0.0f) {
+			return 0.0f;
+		}
+	}
+    float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
+	float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
+	float D = DistributionGGX(H, N, alpha_u, alpha_v);
+	vec3f F = FresnelDielectric(L, H, 1.0f / eta);
+
+	vec3f diffuse = kd, specular = ks;
+	if (nonlinear) {
+		brdf = diffuse / (1.0f - diffuse * fdr);
+	}
+	else {
+		brdf = diffuse / (1.0f - fdr);
+	}
+	brdf *= (1.0f - Fi) * (1.0f - Fo) * M_1_PIf;
+	brdf += specular * F * D * G / (4.0f * NdotL * NdotV);
+
+	pdf = pdf_specular * Dv * abs(1.0f / (4.0f * dot(V, H))) + (1.0f - pdf_specular) * CosinePdfHemisphere(NdotL);
+
+	return brdf;
+}
+//*************************************plastic*************************************

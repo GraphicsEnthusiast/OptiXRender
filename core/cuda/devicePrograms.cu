@@ -227,6 +227,9 @@ extern "C" __global__ void __raygen__renderFrame() {
             else if(prd.isect.material.type == MaterialType::Dielectric) {
                 bsdf = SampleDielectric(prd.isect, prd.random, V, L, bsdf_pdf);
             }
+            else if(prd.isect.material.type == MaterialType::Plastic) {
+                bsdf = SamplePlastic(prd.isect, prd.random, V, L, bsdf_pdf);
+            }
 
             float costheta = abs(dot(prd.isect.shadeNormal, L));
             if(!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
