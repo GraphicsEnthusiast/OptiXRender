@@ -127,15 +127,15 @@ namespace osc {
 #ifdef _WIN32
       // on windows, visual studio creates _two_ levels of build dir
       // (x86/Release)
-      "../../models/clock.obj"
+      "../../models/teapot.obj"
 #else
       // on linux, common practice is to have ONE level of build dir
       // (say, <project>/build/)...
       "../models/sponza.obj"
 #endif
                              );
-      Camera camera = { /*from*/vec3f(-1293.07f, 154.681f, -0.7304f),
-                        /* at */scene.bounds.center()-vec3f(0,400,0),
+      Camera camera = { /*from*/vec3f(10.0f, 10.0f, 10.0f),
+                        /* at */scene.bounds.center(),
                         /* up */vec3f(0.f,1.f,0.f) };
 
       // some simple, hard-coded light ... obviously, only works for sponza

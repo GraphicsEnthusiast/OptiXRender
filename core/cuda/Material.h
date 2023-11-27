@@ -208,7 +208,6 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 		world_L = refract(-V, H, etai_over_etat);
 		vec3f L = world_L;
 
-		//折射不可能在同侧，舍去
 		if (dot(N, L) * dot(N, V) >= 0.0f) {
 			return 0.0f;
 		}
@@ -334,7 +333,7 @@ __forceinline__ __device__ vec3f SamplePlastic(const Interaction& isect, Random&
 			return 0.0f;
 		}
 	}
-	else { //从漫反射分量抽样光线方向
+	else {
 		vec3f local_L = CosineSampleHemisphere(vec2f(random(), random()));
 	    world_L = ToWorld(local_L, N);
 		L = world_L;

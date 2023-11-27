@@ -29,7 +29,6 @@ __forceinline__ __device__  vec3f refract(const vec3f& v, const vec3f& n, float 
 struct Ray {
     vec3f origin;
     vec3f direction;
-    float tmax = FLT_MAX;
 };
 
 struct Interaction {

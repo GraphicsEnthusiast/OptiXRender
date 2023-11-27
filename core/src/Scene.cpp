@@ -110,15 +110,15 @@ TriangleMesh::TriangleMesh(const std::string& objFile) {
 			}
 
 			for (int i = 0; i < 3; ++i) {
-				this->vertex.emplace_back(vec3f(vertices[i][0], vertices[i][1], vertices[i][2]));
-				this->normal.emplace_back(vec3f(normals[i][0], normals[i][1], normals[i][2]));
-				this->texcoord.emplace_back(vec2f(texcoords[i][0], texcoords[i][1]));
+				this->vertex.emplace_back(vertices[i]);
+				this->normal.emplace_back(normals[i]);
+				this->texcoord.emplace_back(texcoords[i]);
 			}
 
 			int index = this->index.size();
 			this->index.emplace_back(vec3i(3 * index, 3 * index + 1, 3 * index + 2));
 
-			this ->material = Material();
+			this->material = Material();
 
 			index_offset += fv;
 		}

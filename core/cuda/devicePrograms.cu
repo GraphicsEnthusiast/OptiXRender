@@ -67,36 +67,20 @@ extern "C" __global__ void __closesthit__radiance() {
     const TriangleMeshSBTData& sbtData = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
     PRD& prd = *GetPRD<PRD>();
 
-    // ------------------------------------------------------------------
-    // gather some basic hit information
-    // ------------------------------------------------------------------
     const int primID = optixGetPrimitiveIndex();
     const vec3i index = sbtData.index[primID];
     const float u = optixGetTriangleBarycentrics().x;
     const float v = optixGetTriangleBarycentrics().y;
+    const vec3f rayDir = optixGetWorldRayDirection();
 
-    // ------------------------------------------------------------------
-    // compute normal, using either shading normal (if avail), or
-    // geometry normal (fallback)
-    // ------------------------------------------------------------------
     const vec3f& A = sbtData.vertex[index.x];
     const vec3f& B = sbtData.vertex[index.y];
     const vec3f& C = sbtData.vertex[index.z];
-    vec3f Ng = cross(B - A, C - A);
-    vec3f Ns = (sbtData.normal)
-        ? ((1.0f - u - v) * sbtData.normal[index.x]
+    vec3f Ns = ((1.0f - u - v) * sbtData.normal[index.x]
             + u * sbtData.normal[index.y]
-            + v * sbtData.normal[index.z])
-        : Ng;
+            + v * sbtData.normal[index.z]);
+    Ns = normalize(Ns);
 
-    // ------------------------------------------------------------------
-    // face-forward and normalize normals
-    // ------------------------------------------------------------------
-    const vec3f rayDir = optixGetWorldRayDirection();
-    // ------------------------------------------------------------------
-    // compute diffuse material color, including diffuse texture, if
-    // available
-    // ------------------------------------------------------------------
     vec3f albedoColor = sbtData.material.albedo;
     if (sbtData.texcoord) {
         const vec2f tc
@@ -200,7 +184,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                 ray.origin,
                 ray.direction,
                 EPS,     // tmin
-                ray.tmax,// tmax
+                FLT_MAX, // tmax
                 0.0f,    // rayTime
                 OptixVisibilityMask(255),
                 OPTIX_RAY_FLAG_DISABLE_ANYHIT,// OPTIX_RAY_FLAG_NONE,
@@ -248,7 +232,7 @@ extern "C" __global__ void __raygen__renderFrame() {
     vec4f rgba(pixelColor / numPixelSamples, 1.0f);
     vec4f albedo(pixelAlbedo / numPixelSamples, 1.0f);
     vec4f normal(pixelNormal / numPixelSamples, 1.0f);
-
+    
     // and write/accumulate to frame buffer ...
     const uint32_t fbIndex = ix + iy * optixLaunchParams.frame.size.x;
     if (optixLaunchParams.frame.frameID > 0) {
