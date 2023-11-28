@@ -14,11 +14,15 @@ __forceinline__ __device__ float sqr(float x) {
     return x * x;
 }
 
+__forceinline__ __device__ float mix(float x, float y, float t) {
+    return x * (1.0f - t) + y * t;
+}
+
 __forceinline__ __device__ vec3f reflect(const vec3f& v, const vec3f& n) {
     return normalize(v - 2.0f * dot(v, n) * n);
 }
 
-__forceinline__ __device__  vec3f refract(const vec3f& v, const vec3f& n, float etai_over_etat) {
+__forceinline__ __device__ vec3f refract(const vec3f& v, const vec3f& n, float etai_over_etat) {
     float cos_theta = min(dot(-v, n), 1.0f);
     vec3f r_out_perp =  etai_over_etat * (v + cos_theta * n);
     vec3f r_out_parallel = -sqrt(abs(1.0f - dot(r_out_perp, r_out_perp))) * n;

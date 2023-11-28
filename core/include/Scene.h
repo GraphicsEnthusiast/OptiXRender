@@ -23,13 +23,13 @@ enum MaterialType {
 };
 
 struct Material {
-    MaterialType type = MaterialType::Plastic;
+    MaterialType type = MaterialType::Conductor;
 
-    vec3f albedo = 0.5f;
+    vec3f albedo = 1.0f;
     int albedoTextureID = -1;
     cudaTextureObject_t albedo_texture;
 
-    float roughness = 0.1f;
+    float roughness = 0.9f;
     int roughnessTextureID = -1;
     cudaTextureObject_t roughness_texture;
 
@@ -48,6 +48,9 @@ struct Material {
     vec3f specular = 1.0f;
     int specularTextureID = -1;
     cudaTextureObject_t specular_texture;
+
+    float* bsdf_avg_buffer = NULL;
+    float* albedo_avg_buffer = NULL;
 
     vec3f emitter = 0.0f;
 };

@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "LaunchParams.h"
+#include "../cuda/Material.h"
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
@@ -154,12 +155,8 @@ OptixTraversableHandle Renderer::BuildAccel() {
         TriangleMesh& mesh = *scene->meshes[meshID];
         vertexBuffer[meshID].alloc_and_upload(mesh.vertex);
         indexBuffer[meshID].alloc_and_upload(mesh.index);
-        if (!mesh.normal.empty()) {
-            normalBuffer[meshID].alloc_and_upload(mesh.normal);
-        }
-        if (!mesh.texcoord.empty()) {
-            texcoordBuffer[meshID].alloc_and_upload(mesh.texcoord);
-        }
+        normalBuffer[meshID].alloc_and_upload(mesh.normal);
+        texcoordBuffer[meshID].alloc_and_upload(mesh.texcoord);
 
         triangleInput[meshID] = {};
         triangleInput[meshID].type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
@@ -528,6 +525,15 @@ void Renderer::CreatePipeline() {
 
 /*! constructs the shader binding table */
 void Renderer::BuildSBT() {
+    // ´´½¨ Kulla-Conty LUT
+    std::cout << "create kulla conty table..." << std::endl;
+    std::vector<float> bsdf_avg(kLutResolution * kLutResolution),
+        albedo_avg(kLutResolution);
+    ComputeKullaConty(bsdf_avg.data(), albedo_avg.data());
+    CUDABuffer bsdf_avg_buffer, albedo_avg_buffer;
+    bsdf_avg_buffer.alloc_and_upload(bsdf_avg);
+    albedo_avg_buffer.alloc_and_upload(albedo_avg);
+
     // ------------------------------------------------------------------
     // build raygen records
     // ------------------------------------------------------------------
@@ -580,7 +586,9 @@ void Renderer::BuildSBT() {
             if (rec.data.material.specularTextureID != -1) {
                 rec.data.material.specular_texture = textureObjects[rec.data.material.specularTextureID];
             }
-            rec.data.index = (vec3i *)indexBuffer[meshID].d_pointer();
+            rec.data.material.bsdf_avg_buffer = (float*)bsdf_avg_buffer.d_pointer();
+            rec.data.material.albedo_avg_buffer = (float*)albedo_avg_buffer.d_pointer();
+            rec.data.index = (vec3i*)indexBuffer[meshID].d_pointer();
             rec.data.vertex = (vec3f*)vertexBuffer[meshID].d_pointer();
             rec.data.normal = (vec3f*)normalBuffer[meshID].d_pointer();
             rec.data.texcoord = (vec2f*)texcoordBuffer[meshID].d_pointer();
