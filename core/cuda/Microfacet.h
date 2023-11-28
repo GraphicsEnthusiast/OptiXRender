@@ -212,7 +212,7 @@ __forceinline__ __device__ __host__ vec2f Hammersley(uint32_t i, uint32_t N) {
 	return { float(i) / float(N), rdi };
 }
 
-__forceinline__ __device__ __host__ void ComputeKullaConty(float* bsdf_buffer, float* albedo_avg_buffer) {
+__forceinline__ __device__ __host__ void ComputeKullaContyBrdf(float* bsdf_buffer, float* albedo_avg_buffer) {
     auto IntegrateBRDF = [](const vec3f &V, const float roughness) {
         constexpr uint32_t sample_count = 1024;
         constexpr float step = 1.0f / sample_count;
