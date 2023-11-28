@@ -2,9 +2,6 @@
 
 #include "Sampling.h"
 #include "Microfacet.h"
-#include "gdt/random/random.h"
-
-typedef gdt::LCG<16> Random;
 
 //*************************************diffuse*************************************
 __forceinline__ __device__ vec3f EvaluateDiffuse(const Interaction& isect, 

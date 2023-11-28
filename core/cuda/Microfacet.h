@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Utils.h"
+#include "gdt/random/random.h"
+
+typedef gdt::LCG<16> Random;
 
 //*************************************fresnel*************************************
 __forceinline__ __device__ vec3f FresnelConductor(const vec3f& V, const vec3f& H, const vec3f& eta_r, const vec3f& eta_i) {
@@ -199,7 +202,7 @@ __forceinline__ __device__ vec3f SampleVisibleGGX(const vec3f& N, const vec3f& V
 //*************************************ggx*************************************
 
 //*************************************kulla_conty*************************************
-constexpr int kLutResolution = 512;
+constexpr int kLutResolution = 64;
 
 __forceinline__ __device__ __host__ vec2f Hammersley(uint32_t i, uint32_t N) {
 	uint32_t bits = (i << 16u) | (i >> 16u);
@@ -212,34 +215,34 @@ __forceinline__ __device__ __host__ vec2f Hammersley(uint32_t i, uint32_t N) {
 	return { float(i) / float(N), rdi };
 }
 
-__forceinline__ __device__ __host__ void ComputeKullaContyBrdf(float* bsdf_buffer, float* albedo_avg_buffer) {
-    auto IntegrateBRDF = [](const vec3f &V, const float roughness) {
-        constexpr uint32_t sample_count = 1024;
+__forceinline__ __device__ __host__ void ComputeKullaContyBrdf(float* brdf_buffer, float* albedo_avg_buffer) {
+    auto IntegrateBRDF = [](const vec3f &V, float roughness) {
+        constexpr uint32_t sample_count = 128;
         constexpr float step = 1.0f / sample_count;
-        const vec3f N = {0.0f, 0.0f, 1.0f};
+        vec3f N = {0.0f, 0.0f, 1.0f};
 
-        float bsdf_accum = 0.0f;
+        float brdf_accum = 0.0f;
         vec3f H, L;
         for (uint32_t i = 0; i < sample_count; ++i) {
             H = SampleGGX(N, roughness, roughness, Hammersley(i + 1, sample_count + 1));
             L = reflect(-V, H);
-            const float G = GeometrySmith_1(L, H, N, roughness, roughness) * GeometrySmith_1(V, H, N, roughness, roughness),
-                        NdotV = dot(N, V),
-                        NdotL = dot(N, L),
-                        NdotH = dot(N, H),
-                        HdotV = dot(H, V);
+            float G = GeometrySmith_1(L, H, N, roughness, roughness) * GeometrySmith_1(V, H, N, roughness, roughness),
+                    NdotV = dot(N, V),
+                    NdotL = dot(N, L),
+                    NdotH = dot(N, H),
+                    HdotV = dot(H, V);
             if (NdotL > 0.0f && NdotH > 0.0f && HdotV > 0.0f) {
-				bsdf_accum += (HdotV * G) / (NdotV * NdotH);
+				brdf_accum += (HdotV * G) / (NdotV * NdotH);
 			}
         }
 
-        return min(bsdf_accum * step, 1.0f);
+        return min(brdf_accum * step, 1.0f);
     };
 
-    auto IntegrateAlbedo = [](const vec3f &V, const float roughness, const float bsdf) {
-        constexpr uint32_t sample_count = 1024;
+    auto IntegrateAlbedo = [](const vec3f &V, float roughness, float brdf) {
+        constexpr uint32_t sample_count = 128;
         constexpr float step = 1.0f / sample_count;
-        const vec3f N = {0.0f, 0.0f, 1.0f};
+        vec3f N = {0.0f, 0.0f, 1.0f};
 
         float albedo_accum = 0.0f;
         vec3f H, L;
@@ -247,11 +250,11 @@ __forceinline__ __device__ __host__ void ComputeKullaContyBrdf(float* bsdf_buffe
             H = SampleGGX(N, roughness, roughness, Hammersley(i + 1, sample_count + 1));
             L = reflect(-V, H);
 
-            const float HdotV = dot(H, V),
-                        NdotL = dot(N, L),
-                        NdotH = dot(N, H);
+            float HdotV = dot(H, V),
+                NdotL = dot(N, L),
+                NdotH = dot(N, H);
             if (NdotL > 0.0f && NdotH > 0.0f && HdotV > 0.0f) {
-				albedo_accum += bsdf * NdotL;
+				albedo_accum += brdf * NdotL;
 			}
         }
 
@@ -263,12 +266,12 @@ __forceinline__ __device__ __host__ void ComputeKullaContyBrdf(float* bsdf_buffe
         albedo_accum = 0.0f;
         float roughness = step * (static_cast<float>(i) + 0.5f);
         for (int j = kLutResolution - 1; j >= 0; --j) {
-            const float NdotV = step * (static_cast<float>(j) + 0.5f);
-            const vec3f V = { sqrtf(1.0f - NdotV * NdotV), 0.0f, NdotV };
-            const float bsdfavg = IntegrateBRDF(V, roughness);
+            float NdotV = step * (static_cast<float>(j) + 0.5f);
+            vec3f V = { sqrtf(1.0f - NdotV * NdotV), 0.0f, NdotV };
+            float brdfavg = IntegrateBRDF(V, roughness);
 
-            bsdf_buffer[i * kLutResolution + j] = bsdfavg;
-            albedo_accum += IntegrateAlbedo(V, roughness, bsdfavg);
+            brdf_buffer[i * kLutResolution + j] = brdfavg;
+            albedo_accum += IntegrateAlbedo(V, roughness, brdfavg);
         }
         albedo_avg_buffer[i] = albedo_accum * step;
     }
