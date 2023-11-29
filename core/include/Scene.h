@@ -23,13 +23,13 @@ enum MaterialType {
 };
 
 struct Material {
-    MaterialType type = MaterialType::Conductor;
+    MaterialType type = MaterialType::Dielectric;
 
     vec3f albedo = 1.0f;
     int albedoTextureID = -1;
     cudaTextureObject_t albedo_texture;
 
-    float roughness = 0.9f;
+    float roughness = 0.2f;
     int roughnessTextureID = - 1;
     cudaTextureObject_t roughness_texture;
 
