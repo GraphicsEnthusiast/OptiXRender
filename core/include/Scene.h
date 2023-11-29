@@ -30,7 +30,7 @@ struct Material {
     cudaTextureObject_t albedo_texture;
 
     float roughness = 0.2f;
-    int roughnessTextureID = - 1;
+    int roughnessTextureID = -1;
     cudaTextureObject_t roughness_texture;
 
     float anisotropy = 0.0f;
