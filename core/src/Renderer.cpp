@@ -527,12 +527,12 @@ void Renderer::CreatePipeline() {
 void Renderer::BuildSBT() {
     // ´´½¨ Kulla-Conty LUT
     std::cout << "create kulla conty table..." << std::endl;
-    std::vector<float> brdf_avg(kLutResolution * kLutResolution),
-        brdf_albedo_avg(kLutResolution);
-    ComputeKullaContyBrdf(brdf_avg.data(), brdf_albedo_avg.data());
-    CUDABuffer brdf_avg_buffer, brdf_albedo_avg_buffer;
-    brdf_avg_buffer.alloc_and_upload(brdf_avg);
-    brdf_albedo_avg_buffer.alloc_and_upload(brdf_albedo_avg);
+    std::vector<float> bsdf_avg(kLutResolution * kLutResolution),
+        bsdf_albedo_avg(kLutResolution);
+    ComputeKullaConty(bsdf_avg.data(), bsdf_albedo_avg.data());
+    CUDABuffer bsdf_avg_buffer, bsdf_albedo_avg_buffer;
+    bsdf_avg_buffer.alloc_and_upload(bsdf_avg);
+    bsdf_albedo_avg_buffer.alloc_and_upload(bsdf_albedo_avg);
 
     // ------------------------------------------------------------------
     // build raygen records
@@ -587,8 +587,8 @@ void Renderer::BuildSBT() {
                 rec.data.material.specular_texture = textureObjects[rec.data.material.specularTextureID];
             }
             if(rec.data.material.type == MaterialType::Conductor || rec.data.material.type == MaterialType::Plastic) {
-                rec.data.material.bsdf_avg_buffer = (float*)brdf_avg_buffer.d_pointer();
-                rec.data.material.albedo_avg_buffer = (float*)brdf_albedo_avg_buffer.d_pointer();
+                rec.data.material.bsdf_avg_buffer = (float*)bsdf_avg_buffer.d_pointer();
+                rec.data.material.albedo_avg_buffer = (float*)bsdf_albedo_avg_buffer.d_pointer();
             }
             rec.data.index = (vec3i*)indexBuffer[meshID].d_pointer();
             rec.data.vertex = (vec3f*)vertexBuffer[meshID].d_pointer();
