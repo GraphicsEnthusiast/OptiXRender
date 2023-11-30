@@ -216,7 +216,7 @@ __forceinline__ __device__ __host__ vec2f Hammersley(uint32_t i, uint32_t N) {
 }
 
 __forceinline__ __device__ __host__ void ComputeKullaConty(float* bsdf_buffer, float* albedo_avg_buffer) {
-    auto Integratebsdf = [](const vec3f &V, float roughness) {
+    auto IntegrateBsdf = [](const vec3f &V, float roughness) {
         constexpr uint32_t sample_count = 128;
         constexpr float step = 1.0f / sample_count;
         vec3f N = {0.0f, 0.0f, 1.0f};
@@ -268,7 +268,7 @@ __forceinline__ __device__ __host__ void ComputeKullaConty(float* bsdf_buffer, f
         for (int j = kLutResolution - 1; j >= 0; --j) {
             float NdotV = step * (static_cast<float>(j) + 0.5f);
             vec3f V = { sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV };
-            float bsdfavg = Integratebsdf(V, roughness);
+            float bsdfavg = IntegrateBsdf(V, roughness);
 
             bsdf_buffer[i * kLutResolution + j] = bsdfavg;
             albedo_accum += IntegrateAlbedo(V, roughness, bsdfavg);
