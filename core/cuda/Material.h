@@ -292,7 +292,7 @@ __forceinline__ __device__ vec3f EvaluatePlastic(const Interaction& isect,
 		brdf = diffuse / (1.0f - F_avg);
 	}
 	brdf *= (1.0f - Fi) * (1.0f - Fo) * M_1_PIf;
-	brdf += specular * (F * D * G / (4.0f * NdotL * NdotV) + EvaluateMultipleScatter(isect, NdotL, NdotV, roughness, vec3f(F_avg)));
+	brdf += specular * (F * D * G / (4.0f * NdotL * NdotV) + EvaluateMultipleScatter(isect, NdotL, NdotV, roughness, F_avg));
 	
 	pdf = pdf_specular * Dv * abs(1.0f / (4.0f * dot(V, H))) + (1.0f - pdf_specular) * CosinePdfHemisphere(NdotL);
 
@@ -370,7 +370,7 @@ __forceinline__ __device__ vec3f SamplePlastic(const Interaction& isect, Random&
 		brdf = diffuse / (1.0f - F_avg);
 	}
 	brdf *= (1.0f - Fi) * (1.0f - Fo) * M_1_PIf;
-	brdf += specular * (F * D * G / (4.0f * NdotL * NdotV) + EvaluateMultipleScatter(isect, NdotL, NdotV, roughness, vec3f(F_avg)));
+	brdf += specular * (F * D * G / (4.0f * NdotL * NdotV) + EvaluateMultipleScatter(isect, NdotL, NdotV, roughness, F_avg));
 
 	pdf = pdf_specular * Dv * abs(1.0f / (4.0f * dot(V, H))) + (1.0f - pdf_specular) * CosinePdfHemisphere(NdotL);
 

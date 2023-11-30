@@ -18,8 +18,7 @@ Scene::~Scene() {
 void Scene::LoadMesh(const std::string& objFile) {
 	TriangleMesh* mesh = new TriangleMesh(objFile);
 	this->meshes.emplace_back(mesh);
-	// of course, you should be using tbb::parallel_for for stuff
-	// like this:
+
 	for (auto vtx : mesh->vertex) {
 		this->bounds.extend(vtx);
 	}

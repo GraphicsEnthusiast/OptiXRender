@@ -9,6 +9,7 @@ add_library(core
     ./cuda/Sampling.h
     ./cuda/Microfacet.h
     ./cuda/Material.h
+    ./cuda/Light.h
     ./include/LaunchParams.h
     ./include/Renderer.h
     ./include/Scene.h

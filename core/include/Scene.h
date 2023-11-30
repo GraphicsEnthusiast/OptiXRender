@@ -23,13 +23,13 @@ enum MaterialType {
 };
 
 struct Material {
-    MaterialType type = MaterialType::Dielectric;
+    MaterialType type = MaterialType::Plastic;
 
-    vec3f albedo = 1.0f;
+    vec3f albedo = 0.8f;
     int albedoTextureID = -1;
     cudaTextureObject_t albedo_texture;
 
-    float roughness = 0.2f;
+    float roughness = 0.1f;
     int roughnessTextureID = -1;
     cudaTextureObject_t roughness_texture;
 
@@ -51,8 +51,6 @@ struct Material {
 
     float* bsdf_avg_buffer = NULL;
     float* albedo_avg_buffer = NULL;
-
-    vec3f emitter = 0.0f;
 };
   
   /*! a simple indexed triangle mesh that our sample renderer will
@@ -68,8 +66,21 @@ struct TriangleMesh {
     Material material;
 };
 
+enum LightType {
+    Quad,
+    Sphere
+};
+
 struct Light {
-    vec3f origin, du, dv, power;
+    LightType type = LightType::Quad;
+    bool doubleSide = true;
+	vec3f radiance = 3.0f;
+    vec3f position{ -3.0f, 12.0f, -3.0f };
+
+    vec3f u{ 6.0f, 0.0f, 0.0f };
+    vec3f v{ 0.0f, 0.0f, 6.0f };
+
+    float radius = 1.0f;
 };
   
 struct Texture {

@@ -38,10 +38,10 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) HitgroupRecord {
 Renderer::Renderer(const Scene* scene) : scene(scene) {
     InitOptix();
 
-    launchParams.light.origin = scene->lights[0].origin;
-    launchParams.light.du = scene->lights[0].du;
-    launchParams.light.dv = scene->lights[0].dv;
-    launchParams.light.power = scene->lights[0].power;
+    CUDABuffer lightsBuffer;
+    lightsBuffer.alloc_and_upload(this->scene->lights);
+    launchParams.lights.lightsBuffer = (Light*)lightsBuffer.d_pointer();
+    launchParams.lights.lightSize = this->scene->lights.size();
 
     std::cout << "creating optix context ..." << std::endl;
     CreateContext();

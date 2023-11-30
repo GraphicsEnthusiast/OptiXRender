@@ -137,17 +137,11 @@ namespace osc {
       Camera camera = { /*from*/vec3f(10.0f, 10.0f, 10.0f),
                         /* at */scene.bounds.center(),
                         /* up */vec3f(0.f,1.f,0.f) };
-
-      // some simple, hard-coded light ... obviously, only works for sponza
-      const float light_size = 200.f;
-      Light light = { /* origin */ vec3f(-1000-light_size,800,-light_size),
-                      /* edge 1 */ vec3f(2.f*light_size,0,0),
-                      /* edge 2 */ vec3f(0,0,2.f*light_size),
-                      /* power */  vec3f(3000000.f) };
                       
       // something approximating the scale of the world, so the
       // camera knows how much to move for any given user interaction:
       const float worldScale = length(scene.bounds.span());
+      Light light;
       scene.AddLight(light);
       SampleWindow *window = new SampleWindow("RTRT_Render",
                                              &scene,camera,worldScale);

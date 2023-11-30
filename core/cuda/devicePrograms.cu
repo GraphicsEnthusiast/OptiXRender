@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 
 #include "Utils.h"
+#include "Light.h"
 #include "Material.h"
 
 #define NUM_LIGHT_SAMPLES 4
@@ -136,6 +137,7 @@ extern "C" __global__ void __raygen__renderFrame() {
     const int ix = optixGetLaunchIndex().x;
     const int iy = optixGetLaunchIndex().y;
     const auto& camera = optixLaunchParams.camera;
+    const auto& lights = optixLaunchParams.lights;
 
     PRD prd;
     prd.random.init(ix + optixLaunchParams.frame.size.x * iy,
@@ -178,8 +180,9 @@ extern "C" __global__ void __raygen__renderFrame() {
 
         prd.isect.distance = 0.0f;
         prd.isect.position = ray.origin;
-
+        
         for(int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
+            //*************************场景中的物体以及灯光求交*************************
             optixTrace(optixLaunchParams.traversable,
                 ray.origin,
                 ray.direction,
@@ -192,12 +195,21 @@ extern "C" __global__ void __raygen__renderFrame() {
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
+            
+            auto light = lights.lightsBuffer[0];
+            float pdf, dis;
+            vec3f light_radiance = EvaluateQuad(light, ray, prd.isect.distance, pdf, dis);
+            if(IsValid(pdf)) {
+                radiance += history * light_radiance;
+                break;
+            }
+            //*************************场景中的物体以及灯光求交*************************
 
             if (prd.isect.distance == FLT_MAX) {
                 vec3f unit_direction = normalize(-V);
                 float t = 0.5f * (unit_direction.y + 1.0f);
                 vec3f backColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
-                radiance += backColor * history;
+                // radiance += backColor * history;
 
                 break;
             }
