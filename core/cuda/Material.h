@@ -122,8 +122,8 @@ __forceinline__ __device__ vec3f EvaluateDielectric(const Interaction& isect,
 	float F_avg_inv_ = AverageFresnelDielectric(1.0f / eta);
 	float F_avg = isect.frontFace ? (F_avg_inv_) : (F_avg_);
 	float F_avg_inv = !isect.frontFace ? (F_avg_inv_) : (F_avg_);
-	float ratio_trans = ((1.0f - F_avg) * (1.0f - F_avg_inv) * sqr(etai_over_etat) / 
-	    ((1.0f - F_avg) + (1.0f - F_avg_inv) * sqr(etai_over_etat)));
+	float ratio_trans = (1.0f - F_avg) * (1.0f - F_avg_inv) * sqr(etai_over_etat) / 
+	    ((1.0f - F_avg) + (1.0f - F_avg_inv) * sqr(etai_over_etat));
 
 	vec3f N = isect.shadeNormal;
 	vec3f V = world_V;
@@ -186,8 +186,8 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 	float F_avg_inv_ = AverageFresnelDielectric(1.0f / eta);
 	float F_avg = isect.frontFace ? (F_avg_inv_) : (F_avg_);
 	float F_avg_inv = !isect.frontFace ? (F_avg_inv_) : (F_avg_);
-	float ratio_trans = ((1.0f - F_avg) * (1.0f - F_avg_inv) * sqr(etai_over_etat) / 
-	    ((1.0f - F_avg) + (1.0f - F_avg_inv) * sqr(etai_over_etat)));
+	float ratio_trans = (1.0f - F_avg) * (1.0f - F_avg_inv) * sqr(etai_over_etat) / 
+	    ((1.0f - F_avg) + (1.0f - F_avg_inv) * sqr(etai_over_etat));
 
 	vec3f N = isect.shadeNormal;
 	vec3f V = world_V;
