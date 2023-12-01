@@ -99,8 +99,7 @@ extern "C" __global__ void __closesthit__radiance() {
         sbtData.material.specular = (vec3f)tex2D<float4>(sbtData.material.specular_texture, tc.x, tc.y);
     }
 
-    const vec3f surfPos
-        = (1.0f - u - v) * sbtData.vertex[index.x]
+    const vec3f surfPos = (1.0f - u - v) * sbtData.vertex[index.x]
         + u * sbtData.vertex[index.y]
         + v * sbtData.vertex[index.z];
 
@@ -228,10 +227,6 @@ extern "C" __global__ void __raygen__renderFrame() {
 
             closest_distance = prd.isect.distance;
             if(lightTrace(ray, light_radiance, light_pdf, closest_distance)) {
-                if(!IsValid(light_pdf)) {
-                    break;
-                }
-
                 float misWeight = 1.0f;
                 if(bounce != 0) {
                     misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
@@ -268,7 +263,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                 shadowRay.origin = prd.isect.position;
                 light_radiance = SampleLight(light, shadowRay.origin, vec2f(prd.random(), prd.random()), shadowRay.direction, light_distance, light_pdf);
                 optixTrace(optixLaunchParams.traversable,
-                    prd.isect.position,
+                    shadowRay.origin,
                     shadowRay.direction,
                     EPS,                   // tmin
                     light_distance - EPS,  // tmax
