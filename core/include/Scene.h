@@ -73,12 +73,12 @@ enum LightType {
 
 struct Light {
     LightType type = LightType::Quad;
-    bool doubleSide = true;
+    bool doubleSide = false;
 	vec3f radiance = 3.0f;
     vec3f position{ -3.0f, 12.0f, -3.0f };
 
-    vec3f u{ 6.0f, 0.0f, 0.0f };
-    vec3f v{ 0.0f, 0.0f, 6.0f };
+    vec3f u{ 0.0f, 0.0f, 6.0f };
+    vec3f v{ 6.0f, 0.0f, 0.0f };
 
     float radius = 1.0f;
 };
@@ -87,8 +87,8 @@ struct Texture {
     Texture();
     ~Texture();
     
-    uint32_t* pixel { nullptr };
-    vec2i resolution { -1 };
+    uint32_t* pixel{ nullptr };
+    vec2i resolution{ -1 };
 };
   
 class Scene {

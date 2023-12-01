@@ -2,6 +2,13 @@
 
 #include "Utils.h"
 
+__forceinline__ __device__ float PowerHeuristic(float pdf1, float pdf2, int beta) {
+	float p1 = pow(pdf1, beta);
+	float p2 = pow(pdf2, beta);
+
+	return p1 / (p1 + p2);
+}
+
 __forceinline__ __device__ vec3f CosineSampleHemisphere(const vec2f& sample) {
 	vec3f p = 0.0f;
 

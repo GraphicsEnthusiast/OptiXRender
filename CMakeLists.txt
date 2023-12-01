@@ -4,6 +4,8 @@ project("RTRT_Render")
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/source-charset:utf-8>")
+
 # ------------------------------------------------------------------
 # first, include gdt project to do some general configuration stuff
 # (build modes, glut, optix, etc)

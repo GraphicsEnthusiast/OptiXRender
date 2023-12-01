@@ -16,10 +16,11 @@ extern "C" __constant__ LaunchParams optixLaunchParams;
     can access RNG state */
 struct PRD {
     Random random;
+    bool lightVisible;
     Interaction isect;
 };
 
-/* 
+/*
 UnpackPointer 和 PackPointer 就是对某个指针中保存的地址进行高32位和低32位的拆分和合并。
 之所以需要拆分，是因为我们的计算机是64位的所以指针也是64位的，然而gpu的寄存器是32位的，
 因此只能将指针拆分成两部分存进gpu的寄存器。
@@ -61,7 +62,8 @@ static __forceinline__ __device__ T* GetPRD() {
 //------------------------------------------------------------------------------
 
 extern "C" __global__ void __closesthit__shadow() {
-    /* not going to be used ... */
+    PRD& prd = *GetPRD<PRD>();
+    prd.lightVisible = false;
 }
 
 extern "C" __global__ void __closesthit__radiance() {
@@ -74,30 +76,23 @@ extern "C" __global__ void __closesthit__radiance() {
     const float v = optixGetTriangleBarycentrics().y;
     const vec3f rayDir = optixGetWorldRayDirection();
 
-    const vec3f& A = sbtData.vertex[index.x];
-    const vec3f& B = sbtData.vertex[index.y];
-    const vec3f& C = sbtData.vertex[index.z];
     vec3f Ns = ((1.0f - u - v) * sbtData.normal[index.x]
-            + u * sbtData.normal[index.y]
-            + v * sbtData.normal[index.z]);
+        + u * sbtData.normal[index.y]
+        + v * sbtData.normal[index.z]);
     Ns = normalize(Ns);
 
-    vec3f albedoColor = sbtData.material.albedo;
-    if (sbtData.texcoord) {
-        const vec2f tc
-            = (1.0f - u - v) * sbtData.texcoord[index.x]
-            + u * sbtData.texcoord[index.y]
-            + v * sbtData.texcoord[index.z];
+    const vec2f tc = (1.0f - u - v) * sbtData.texcoord[index.x]
+        + u * sbtData.texcoord[index.y]
+        + v * sbtData.texcoord[index.z];
 
-        vec4f fromTexture = tex2D<float4>(sbtData.material.albedo_texture, tc.x, tc.y);
-        albedoColor = (vec3f)fromTexture;
-    }
+    vec3f albedoColor = sbtData.material.albedo;
+    albedoColor = (vec3f)tex2D<float4>(sbtData.material.albedo_texture, tc.x, tc.y);
 
     const vec3f surfPos
         = (1.0f - u - v) * sbtData.vertex[index.x]
         + u * sbtData.vertex[index.y]
         + v * sbtData.vertex[index.z];
-    
+
     prd.isect.SetFaceNormal(rayDir, Ns);
     prd.isect.distance = length(surfPos - prd.isect.position);
     prd.isect.position = surfPos;
@@ -125,8 +120,8 @@ extern "C" __global__ void __miss__radiance() {
 
 extern "C" __global__ void __miss__shadow() {
     // we didn't hit anything, so the light is visible
-    vec3f& prd = *(vec3f*)GetPRD<vec3f>();
-    prd = vec3f(1.0f);
+    PRD& prd = *GetPRD<PRD>();
+    prd.lightVisible = true;
 }
 
 //------------------------------------------------------------------------------
@@ -152,7 +147,27 @@ extern "C" __global__ void __raygen__renderFrame() {
     vec3f pixelColor = 0.0f;
     vec3f pixelNormal = 0.0f;
     vec3f pixelAlbedo = 0.0f;
-    for (int sampleID = 0; sampleID < numPixelSamples; sampleID++) {
+
+    auto lightTrace = [&lights](const Ray& ray, vec3f& light_radiance, float& light_pdf, float closest_distance) -> bool {
+        bool hitLight = false;
+        for(int i = 0; i < lights.lightSize; i++) {
+            const Light& light = lights.lightsBuffer[i];
+            float light_distance = FLT_MAX;
+            vec3f Li = EvaluateLight(light, ray, closest_distance, light_pdf, light_distance);
+
+            // 没有击中光源，pdf = 0.0f
+            if (!IsValid(light_pdf)) {
+                continue;
+            }
+            hitLight = true;
+            light_radiance = Li;
+            closest_distance = light_distance;
+        }
+
+        return hitLight;
+    };
+
+    for(int sampleID = 0; sampleID < numPixelSamples; sampleID++) {
         // normalized screen plane position, in [0,1]^2
 
         // iw: note for denoising that's not actually correct - if we
@@ -172,17 +187,21 @@ extern "C" __global__ void __raygen__renderFrame() {
         ray.direction = rayDir;
 
         vec3f radiance(0.0f);
-	    vec3f history(1.0f);
-	    vec3f V = -ray.direction;
-	    vec3f L = ray.direction;
+        vec3f history(1.0f);
+        vec3f V = -ray.direction;
+        vec3f L = ray.direction;
+        float light_pdf = 0.0f;
         float bsdf_pdf = 0.0f;
         vec3f bsdf = 0.0f;
+        vec3f light_radiance = 0.0f;
+        float closest_distance = FLT_MAX;
 
         prd.isect.distance = 0.0f;
         prd.isect.position = ray.origin;
-        
+
         for(int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
             //*************************场景中的物体以及灯光求交*************************
+            // 分别遍历场景中的物体以及光源，记录最近的那个
             optixTrace(optixLaunchParams.traversable,
                 ray.origin,
                 ray.direction,
@@ -196,41 +215,80 @@ extern "C" __global__ void __raygen__renderFrame() {
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
 
-            float closest_distance = prd.isect.distance;
-            vec3f light_radiance = 0.0f;
-            bool hitLight = false;
-            for (int i = 0; i < lights.lightSize; i++){ 
-                const Light& light = lights.lightsBuffer[i];
- 
-                float light_pdf = 0.0f;
-                float light_distance = FLT_MAX;
-                vec3f Li = EvaluateLight(light, ray, closest_distance, light_pdf, light_distance);
-
-                if (!IsValid(light_pdf)) {
-                    continue;
+            closest_distance = prd.isect.distance;
+            if(lightTrace(ray, light_radiance, light_pdf, closest_distance)) {
+                if(!IsValid(light_pdf)) {
+                    break;
                 }
 
-                hitLight = true;
-		        light_radiance = Li;
-		        closest_distance = light_distance;
-            }
-
-            if(hitLight) {
-                radiance += history * light_radiance;
+                float misWeight = 1.0f;
+                if(bounce != 0) {
+                    misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
+                }
+                radiance += misWeight * history * light_radiance;
 
                 break;
             }
             //*************************场景中的物体以及灯光求交*************************
 
-            if (prd.isect.distance == FLT_MAX) {
-                vec3f unit_direction = normalize(-V);
-                float t = 0.5f * (unit_direction.y + 1.0f);
-                vec3f backColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
-                // radiance += backColor * history;
+            // 没有击中任何物体，积累背景色
+            bool notHit = prd.isect.distance == FLT_MAX;
+            if(notHit) {
+                //vec3f unit_direction = normalize(- V);
+                //float t = 0.5f * (unit_direction.y + 1.0f);
+                //vec3f backColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
+                //backColor = 0.0f;
+
+                //float misWeight = 1.0f;
+                //if(bounce != 0) {
+                //   misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
+                //}
+                //radiance += misWeight * backColor * history;
 
                 break;
             }
-            
+
+            if(lights.lightSize != 0) {
+                // uniform sample one light
+                int index = clamp(int(lights.lightSize * prd.random()), 0, lights.lightSize - 1);
+                const Light& light = lights.lightsBuffer[index];
+                float light_distance = 0.0f;
+                Ray shadowRay;
+                shadowRay.origin = prd.isect.position;
+                light_radiance = SampleLight(light, shadowRay.origin, vec2f(prd.random(), prd.random()), shadowRay.direction, light_distance, light_pdf);
+                optixTrace(optixLaunchParams.traversable,
+                    prd.isect.position,
+                    shadowRay.direction,
+                    EPS,                   // tmin
+                    light_distance - EPS,  // tmax
+                    0.0f,                  // rayTime
+                    OptixVisibilityMask(255),
+                    // For shadow rays: skip any/closest hit shaders and terminate on first
+                    // intersection with anything. The miss shader is used to mark if the
+                    // light was visible.
+                    OPTIX_RAY_FLAG_DISABLE_ANYHIT
+                    | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
+                    | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
+                    SHADOW_RAY_TYPE,            // SBT offset
+                    RAY_TYPE_COUNT,             // SBT stride
+                    SHADOW_RAY_TYPE,            // missSBTIndex 
+                    u0, u1);
+
+                vec3f tv; float t;
+                if(!lightTrace(shadowRay, tv, t, light_distance - EPS) && prd.lightVisible) {
+                    bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
+                    float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
+                    if(!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(light_pdf) || !IsValid(costheta)) {
+                        break;
+                    }
+                    float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
+
+                    radiance += misWeight * light_radiance * bsdf * costheta * history / light_pdf;
+
+                }
+            }
+
+            // 采样物体表面材质
             bsdf = SampleMaterial(prd.isect, prd.random, V, L, bsdf_pdf);
             float costheta = abs(dot(prd.isect.shadeNormal, L));
             if(!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
@@ -238,18 +296,26 @@ extern "C" __global__ void __raygen__renderFrame() {
             }
             history *= bsdf * costheta / bsdf_pdf;
 
+            // 俄罗斯轮盘赌
+            float prr = min((history.x + history.y + history.z) / 3.0f, 1.0f);
+            if(prd.random() > prr) {
+                break;
+            }
+            history /= prr;
+
+            // 更新光线信息
             V = -L;
             ray.origin = prd.isect.position;
             ray.direction = L;
         }
-        
+
         pixelColor += radiance;
     }
 
     vec4f rgba(pixelColor / numPixelSamples, 1.0f);
     vec4f albedo(pixelAlbedo / numPixelSamples, 1.0f);
     vec4f normal(pixelNormal / numPixelSamples, 1.0f);
-    
+
     // and write/accumulate to frame buffer ...
     const uint32_t fbIndex = ix + iy * optixLaunchParams.frame.size.x;
     if (optixLaunchParams.frame.frameID > 0) {
