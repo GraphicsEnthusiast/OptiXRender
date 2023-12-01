@@ -141,6 +141,24 @@ __forceinline__ __device__ vec3f SampleSphere(const Light& light, const vec3f& h
 }
 //*************************************sphere*************************************
 
+//*************************************infinite area*************************************
+__forceinline__ __host__ AliasTable2D ComputeInfiniteAliasTable(float* data, int nx, int ny, int nn) {
+    float* pdf = new float[nx * ny];
+	float sum = 0.0f;
+	for (int j = 0; j < ny; j++) {
+		for (int i = 0; i < nx; i++) {
+			vec3f l(data[nn * (j * nx + i)], data[nn * (j * nx + i) + 1], data[nn * (j * nx + i) + 2]);
+			pdf[j * nx + i] = Luminance(l) * sin((float)(j + 0.5f) / ny * M_PIf);
+			sum += pdf[j * nx + i];
+		}
+	}
+	AliasTable2D table(pdf, nx, ny);
+	delete[] pdf;
+
+	return table;
+}
+//*************************************infinite area*************************************
+
 //*************************************light*************************************
 __forceinline__ __device__ vec3f EvaluateLight(const Light& light, const Ray& ray, float distance, float& pdf, float& light_distance) {
 	if (light.type == LightType::Quad) {

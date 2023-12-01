@@ -42,11 +42,15 @@ struct Interaction {
 	bool frontFace;
 	Material material;
 
-	__forceinline__ __device__  void SetFaceNormal(const vec3f& dir, const vec3f& outward_normal) {
+	__forceinline__ __device__ void SetFaceNormal(const vec3f& dir, const vec3f& outward_normal) {
 		frontFace = dot(dir, outward_normal) < 0.0f;
 		shadeNormal = frontFace ? outward_normal : -outward_normal;
 	}
 };
+
+__forceinline__ __device__ __host__ float Luminance(const vec3f& c) {
+	return dot(vec3f(0.299f, 0.587f, 0.114f), c);
+}
 
 __forceinline__ __device__ bool IsValid(float value) {
 	if (isnan(value) || value < EPS) {

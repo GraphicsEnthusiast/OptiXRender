@@ -3,6 +3,11 @@
         "cstdlib": "cpp",
         "algorithm": "cpp",
         "vector": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "utility": "cpp",
+        "queue": "cpp",
+        "chrono": "cpp",
+        "memory": "cpp",
+        "cmath": "cpp"
     }
 }

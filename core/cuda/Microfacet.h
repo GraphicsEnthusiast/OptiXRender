@@ -201,7 +201,7 @@ __forceinline__ __device__ vec3f SampleVisibleGGX(const vec3f& N, const vec3f& V
 }
 //*************************************ggx*************************************
 
-//*************************************kulla_conty*************************************
+//*************************************kulla conty*************************************
 constexpr int kLutResolution = 64;
 
 __forceinline__ __device__ __host__ vec2f Hammersley(uint32_t i, uint32_t N) {
@@ -331,4 +331,4 @@ __forceinline__ __device__ vec3f EvaluateMultipleScatter(const Interaction& isec
 
 	return f_ms * f_add;
 }
-//*************************************kulla_conty*************************************
+//*************************************kulla conty*************************************

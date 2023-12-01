@@ -88,6 +88,7 @@ struct Texture {
     ~Texture();
 
     uint32_t* pixel{ nullptr };
+    float* hdr_pixel{ nullptr };
     vec2i resolution{ -1 };
 };
 
