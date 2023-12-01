@@ -195,12 +195,29 @@ extern "C" __global__ void __raygen__renderFrame() {
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-            
-            auto light = lights.lightsBuffer[0];
-            float pdf, dis;
-            vec3f light_radiance = EvaluateQuad(light, ray, prd.isect.distance, pdf, dis);
-            if(IsValid(pdf)) {
+
+            float closest_distance = prd.isect.distance;
+            vec3f light_radiance = 0.0f;
+            bool hitLight = false;
+            for (int i = 0; i < lights.lightSize; i++){ 
+                const Light& light = lights.lightsBuffer[i];
+ 
+                float light_pdf = 0.0f;
+                float light_distance = FLT_MAX;
+                vec3f Li = EvaluateLight(light, ray, closest_distance, light_pdf, light_distance);
+
+                if (!IsValid(light_pdf)) {
+                    continue;
+                }
+
+                hitLight = true;
+		        light_radiance = Li;
+		        closest_distance = light_distance;
+            }
+
+            if(hitLight) {
                 radiance += history * light_radiance;
+
                 break;
             }
             //*************************场景中的物体以及灯光求交*************************
@@ -213,20 +230,8 @@ extern "C" __global__ void __raygen__renderFrame() {
 
                 break;
             }
-
-            if(prd.isect.material.type == MaterialType::Diffuse) {
-                bsdf = SampleDiffuse(prd.isect, prd.random, V, L, bsdf_pdf);
-            }
-            else if(prd.isect.material.type == MaterialType::Conductor) {
-                bsdf = SampleConductor(prd.isect, prd.random, V, L, bsdf_pdf);
-            }
-            else if(prd.isect.material.type == MaterialType::Dielectric) {
-                bsdf = SampleDielectric(prd.isect, prd.random, V, L, bsdf_pdf);
-            }
-            else if(prd.isect.material.type == MaterialType::Plastic) {
-                bsdf = SamplePlastic(prd.isect, prd.random, V, L, bsdf_pdf);
-            }
-
+            
+            bsdf = SampleMaterial(prd.isect, prd.random, V, L, bsdf_pdf);
             float costheta = abs(dot(prd.isect.shadeNormal, L));
             if(!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
                 break;

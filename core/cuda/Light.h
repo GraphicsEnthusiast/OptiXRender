@@ -73,3 +73,23 @@ __forceinline__ __device__ vec3f SampleQuad(const Light& light, const vec3f& hit
 	return light.radiance;
 }
 //*************************************quad*************************************
+
+//*************************************light*************************************
+__forceinline__ __device__ vec3f EvaluateLight(const Light& light, const Ray& ray, float distance, float& pdf, float& light_distance) {
+	if (light.type == LightType::Quad) {
+		return EvaluateQuad(light, ray, distance, pdf, light_distance);
+	}
+	
+	return 0.0f;
+}
+
+__forceinline__ __device__ vec3f SampleLight(const Light& light, const vec3f& hitpos, const vec2f& sample, vec3f& world_L, float& distance, float& pdf) {
+	if (light.type == LightType::Quad) {
+		return SampleQuad(light, hitpos, sample, world_L, distance, pdf);
+	}
+	
+	pdf = 0.0f;
+
+	return 0.0f;
+}
+//*************************************light*************************************

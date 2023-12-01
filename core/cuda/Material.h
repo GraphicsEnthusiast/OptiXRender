@@ -377,3 +377,45 @@ __forceinline__ __device__ vec3f SamplePlastic(const Interaction& isect, Random&
 	return brdf;
 }
 //*************************************plastic*************************************
+
+//*************************************material*************************************
+__forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect, 
+    const vec3f& world_V, const vec3f& world_L, float& pdf) {
+	vec3f bsdf = 0.0f;
+	pdf = 0.0f;
+	if(isect.material.type == MaterialType::Diffuse) {
+        bsdf = EvaluateDiffuse(isect, world_V, world_L, pdf);
+    }
+    else if(isect.material.type == MaterialType::Conductor) {
+        bsdf = EvaluateConductor(isect, world_V, world_L, pdf);
+    }
+    else if(isect.material.type == MaterialType::Dielectric) {
+        bsdf = EvaluateDielectric(isect, world_V, world_L, pdf);
+    }
+    else if(isect.material.type == MaterialType::Plastic) {
+        bsdf = EvaluatePlastic(isect, world_V, world_L, pdf);
+    }
+
+    return bsdf;
+}
+
+__forceinline__ __device__ vec3f SampleMaterial(const Interaction& isect, Random& random,
+	const vec3f& world_V, vec3f& world_L, float& pdf) {
+	vec3f bsdf = 0.0f;
+	pdf = 0.0f;
+	if(isect.material.type == MaterialType::Diffuse) {
+        bsdf = SampleDiffuse(isect, random, world_V, world_L, pdf);
+    }
+    else if(isect.material.type == MaterialType::Conductor) {
+        bsdf = SampleConductor(isect, random, world_V, world_L, pdf);
+    }
+    else if(isect.material.type == MaterialType::Dielectric) {
+        bsdf = SampleDielectric(isect, random, world_V, world_L, pdf);
+    }
+    else if(isect.material.type == MaterialType::Plastic) {
+        bsdf = SamplePlastic(isect, random, world_V, world_L, pdf);
+    }
+
+    return bsdf;
+}
+//*************************************material*************************************
