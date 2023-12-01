@@ -67,7 +67,7 @@ extern "C" __global__ void __closesthit__shadow() {
 }
 
 extern "C" __global__ void __closesthit__radiance() {
-    const TriangleMeshSBTData& sbtData = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
+    TriangleMeshSBTData& sbtData = *(TriangleMeshSBTData*)optixGetSbtDataPointer();
     PRD& prd = *GetPRD<PRD>();
 
     const int primID = optixGetPrimitiveIndex();
@@ -85,8 +85,19 @@ extern "C" __global__ void __closesthit__radiance() {
         + u * sbtData.texcoord[index.y]
         + v * sbtData.texcoord[index.z];
 
-    vec3f albedoColor = sbtData.material.albedo;
-    albedoColor = (vec3f)tex2D<float4>(sbtData.material.albedo_texture, tc.x, tc.y);
+
+    if(sbtData.material.albedoTextureID != -1) {
+        sbtData.material.albedo = (vec3f)tex2D<float4>(sbtData.material.albedo_texture, tc.x, tc.y);
+    }
+    if(sbtData.material.roughnessTextureID != -1) {
+        sbtData.material.roughness = tex2D<float4>(sbtData.material.roughness_texture, tc.x, tc.y).x;
+    }
+    if(sbtData.material.anisotropyTextureID != -1) {
+        sbtData.material.anisotropy = tex2D<float4>(sbtData.material.anisotropy_texture, tc.x, tc.y).x;
+    }
+    if(sbtData.material.specularTextureID != -1) {
+        sbtData.material.specular = (vec3f)tex2D<float4>(sbtData.material.specular_texture, tc.x, tc.y);
+    }
 
     const vec3f surfPos
         = (1.0f - u - v) * sbtData.vertex[index.x]
