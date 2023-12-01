@@ -216,119 +216,119 @@ __forceinline__ __device__ __host__ vec2f Hammersley(uint32_t i, uint32_t N) {
 }
 
 __forceinline__ __device__ __host__ void ComputeKullaConty(float* bsdf_buffer, float* albedo_avg_buffer) {
-    auto IntegrateBsdf = [](const vec3f &V, float roughness) {
-        constexpr uint32_t sample_count = 128;
-        constexpr float step = 1.0f / sample_count;
-        vec3f N = {0.0f, 0.0f, 1.0f};
+	auto IntegrateBsdf = [](const vec3f& V, float roughness) {
+		constexpr uint32_t sample_count = 128;
+		constexpr float step = 1.0f / sample_count;
+		vec3f N = { 0.0f, 0.0f, 1.0f };
 
-        float bsdf_accum = 0.0f;
-        vec3f H, L;
-        for (uint32_t i = 0; i < sample_count; ++i) {
-            H = SampleGGX(N, roughness, roughness, Hammersley(i + 1, sample_count + 1));
-            L = reflect(-V, H);
-            float G = GeometrySmith_1(L, H, N, roughness, roughness) * GeometrySmith_1(V, H, N, roughness, roughness),
-                    NdotV = dot(N, V),
-                    NdotL = dot(N, L),
-                    NdotH = dot(N, H),
-                    HdotV = dot(H, V);
-            if (NdotL > 0.0f && NdotH > 0.0f && HdotV > 0.0f) {
+		float bsdf_accum = 0.0f;
+		vec3f H, L;
+		for (uint32_t i = 0; i < sample_count; ++i) {
+			H = SampleGGX(N, roughness, roughness, Hammersley(i + 1, sample_count + 1));
+			L = reflect(-V, H);
+			float G = GeometrySmith_1(L, H, N, roughness, roughness) * GeometrySmith_1(V, H, N, roughness, roughness),
+				NdotV = dot(N, V),
+				NdotL = dot(N, L),
+				NdotH = dot(N, H),
+				HdotV = dot(H, V);
+			if (NdotL > 0.0f && NdotH > 0.0f && HdotV > 0.0f) {
 				bsdf_accum += (HdotV * G) / (NdotV * NdotH);
 			}
-        }
+		}
 
-        return min(bsdf_accum * step, 1.0f);
-    };
+		return min(bsdf_accum * step, 1.0f);
+	};
 
-    auto IntegrateAlbedo = [](const vec3f &V, float roughness, float bsdf) {
-        constexpr uint32_t sample_count = 128;
-        constexpr float step = 1.0f / sample_count;
-        vec3f N = {0.0f, 0.0f, 1.0f};
+	auto IntegrateAlbedo = [](const vec3f& V, float roughness, float bsdf) {
+		constexpr uint32_t sample_count = 128;
+		constexpr float step = 1.0f / sample_count;
+		vec3f N = { 0.0f, 0.0f, 1.0f };
 
-        float albedo_accum = 0.0f;
-        vec3f H, L;
-        for (uint32_t i = 0; i < sample_count; ++i) {
-            H = SampleGGX(N, roughness, roughness, Hammersley(i + 1, sample_count + 1));
-            L = reflect(-V, H);
+		float albedo_accum = 0.0f;
+		vec3f H, L;
+		for (uint32_t i = 0; i < sample_count; ++i) {
+			H = SampleGGX(N, roughness, roughness, Hammersley(i + 1, sample_count + 1));
+			L = reflect(-V, H);
 
-            float HdotV = dot(H, V),
-                NdotL = dot(N, L),
-                NdotH = dot(N, H);
-            if (NdotL > 0.0f && NdotH > 0.0f && HdotV > 0.0f) {
+			float HdotV = dot(H, V),
+				NdotL = dot(N, L),
+				NdotH = dot(N, H);
+			if (NdotL > 0.0f && NdotH > 0.0f && HdotV > 0.0f) {
 				albedo_accum += bsdf * NdotL;
 			}
-        }
+		}
 
-        return albedo_accum * 2.0f * step;
-    };
+		return albedo_accum * 2.0f * step;
+	};
 
-    float step = 1.0f / kLutResolution, albedo_accum = 0.0f;
-    for (int i = kLutResolution - 1; i >= 0; --i) {
-        albedo_accum = 0.0f;
-        float roughness = step * (static_cast<float>(i) + 0.5f);
-        for (int j = kLutResolution - 1; j >= 0; --j) {
-            float NdotV = step * (static_cast<float>(j) + 0.5f);
-            vec3f V = { sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV };
-            float bsdfavg = IntegrateBsdf(V, roughness);
+	float step = 1.0f / kLutResolution, albedo_accum = 0.0f;
+	for (int i = kLutResolution - 1; i >= 0; --i) {
+		albedo_accum = 0.0f;
+		float roughness = step * (static_cast<float>(i) + 0.5f);
+		for (int j = kLutResolution - 1; j >= 0; --j) {
+			float NdotV = step * (static_cast<float>(j) + 0.5f);
+			vec3f V = { sqrt(1.0f - NdotV * NdotV), 0.0f, NdotV };
+			float bsdfavg = IntegrateBsdf(V, roughness);
 
-            bsdf_buffer[i * kLutResolution + j] = bsdfavg;
-            albedo_accum += IntegrateAlbedo(V, roughness, bsdfavg);
-        }
-        albedo_avg_buffer[i] = albedo_accum * step;
-    }
+			bsdf_buffer[i * kLutResolution + j] = bsdfavg;
+			albedo_accum += IntegrateAlbedo(V, roughness, bsdfavg);
+		}
+		albedo_avg_buffer[i] = albedo_accum * step;
+	}
 }
 
 __forceinline__ __device__ float GetBsdfAvg(float cos_theta, float roughness, float* bsdf) {
 	float offset1 = sqr(roughness) * kLutResolution,
-                offset2 = cos_theta * kLutResolution;
-    int offset_int1 = static_cast<int>(offset1),
-              offset_int2 = static_cast<int>(offset2);
-    if (offset_int1 >= kLutResolution - 1) {
-        if (offset_int2 >= kLutResolution - 1) {
-            return bsdf[(kLutResolution - 1) * kLutResolution + kLutResolution - 1];
-        }
-        else {
-            return mix(bsdf[(kLutResolution - 1) * kLutResolution + offset_int2],
-                        bsdf[(kLutResolution - 1) * kLutResolution + offset_int2 + 1],
-                        offset2 - offset_int2);
-        }
-    }
-    else {
-        if (offset_int2 >= kLutResolution - 1) {
-            return mix(bsdf[offset_int1 * kLutResolution + kLutResolution - 1],
-                        bsdf[(offset_int1 + 1) * kLutResolution + kLutResolution - 1],
-                        offset1 - offset_int1);
-        }
-        else {
-            return mix(mix(bsdf[offset_int1 * kLutResolution + offset_int2],
-                             bsdf[(offset_int1 + 1) * kLutResolution + offset_int2],
-                             offset1 - offset_int1),
-                        mix(bsdf[offset_int1 * kLutResolution + offset_int2 + 1],
-                             bsdf[(offset_int1 + 1) * kLutResolution + offset_int2 + 1],
-                             offset1 - offset_int1),
-                        offset2 - offset_int2);
-        }
-    }
+		offset2 = cos_theta * kLutResolution;
+	int offset_int1 = static_cast<int>(offset1),
+		offset_int2 = static_cast<int>(offset2);
+	if (offset_int1 >= kLutResolution - 1) {
+		if (offset_int2 >= kLutResolution - 1) {
+			return bsdf[(kLutResolution - 1) * kLutResolution + kLutResolution - 1];
+		}
+		else {
+			return mix(bsdf[(kLutResolution - 1) * kLutResolution + offset_int2],
+				bsdf[(kLutResolution - 1) * kLutResolution + offset_int2 + 1],
+				offset2 - offset_int2);
+		}
+	}
+	else {
+		if (offset_int2 >= kLutResolution - 1) {
+			return mix(bsdf[offset_int1 * kLutResolution + kLutResolution - 1],
+				bsdf[(offset_int1 + 1) * kLutResolution + kLutResolution - 1],
+				offset1 - offset_int1);
+		}
+		else {
+			return mix(mix(bsdf[offset_int1 * kLutResolution + offset_int2],
+				bsdf[(offset_int1 + 1) * kLutResolution + offset_int2],
+				offset1 - offset_int1),
+				mix(bsdf[offset_int1 * kLutResolution + offset_int2 + 1],
+					bsdf[(offset_int1 + 1) * kLutResolution + offset_int2 + 1],
+					offset1 - offset_int1),
+				offset2 - offset_int2);
+		}
+	}
 }
 
 __forceinline__ __device__ float GetAlbedoAvg(float roughness, float* albedo_avg) {
 	float offset = sqr(roughness) * kLutResolution;
-    int offset_int = static_cast<int>(offset);
-    if (offset_int >= kLutResolution - 1) {
+	int offset_int = static_cast<int>(offset);
+	if (offset_int >= kLutResolution - 1) {
 		return albedo_avg[kLutResolution - 1];
 	}
-    else {
+	else {
 		return mix(albedo_avg[offset_int], albedo_avg[offset_int + 1], offset - offset_int);
 	}
 }
 
 __forceinline__ __device__ vec3f EvaluateMultipleScatter(const Interaction& isect, float NdotL, float NdotV,
-    float roughness, const vec3f& F_avg) {
-    float bsdf_L = GetBsdfAvg(NdotL, roughness, isect.material.bsdf_avg_buffer),
-                bsdf_V = GetBsdfAvg(NdotV, roughness, isect.material.bsdf_avg_buffer),
-                albedo_avg = GetAlbedoAvg(roughness, isect.material.albedo_avg_buffer),
-                f_ms = (1.0f - bsdf_L) * (1.0f - bsdf_V) / (M_PIf * (1.0f - albedo_avg));
-    vec3f f_add = F_avg * F_avg * albedo_avg / (1.0f - F_avg * (1.0f - albedo_avg));
+	float roughness, const vec3f& F_avg) {
+	float bsdf_L = GetBsdfAvg(NdotL, roughness, isect.material.bsdf_avg_buffer),
+		bsdf_V = GetBsdfAvg(NdotV, roughness, isect.material.bsdf_avg_buffer),
+		albedo_avg = GetAlbedoAvg(roughness, isect.material.albedo_avg_buffer),
+		f_ms = (1.0f - bsdf_L) * (1.0f - bsdf_V) / (M_PIf * (1.0f - albedo_avg));
+	vec3f f_add = F_avg * F_avg * albedo_avg / (1.0f - F_avg * (1.0f - albedo_avg));
 
-    return f_ms * f_add;
+	return f_ms * f_add;
 }
 //*************************************kulla_conty*************************************

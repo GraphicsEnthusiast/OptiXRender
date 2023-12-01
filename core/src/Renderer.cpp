@@ -237,7 +237,7 @@ OptixTraversableHandle Renderer::BuildAccel() {
         outputBuffer.d_pointer(),
         outputBuffer.sizeInBytes,
         &asHandle,
-        &emitDesc, 
+        &emitDesc,
         1
     ));
     CUDA_SYNC_CHECK();

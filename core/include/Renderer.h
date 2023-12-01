@@ -118,13 +118,13 @@ protected:
         3、Any Shader（用户定义某个交点是否需要抛弃，比如纯透明物体的求交就没有意义，就需要抛弃）
         4、Intersection Shader（定义非三角形形状的求交算法）。
         5、Closet Shader（处理最近求交点的着色情况）
-        
+
                                            Intersection ---> Any Hit
                                                 ^               |
                                                 |               v                   --- Yes ---> Closet Hit
         RayGen Shader ---> TraceRay() ---> AccelerationStructureTraversal ---> Hit?
                                                                                     --- No ---> Miss
-        
+
         RayGen Shader负责创建每个像素出射的光线，然后Optix底层就会开始进行最近点的求交，
         如果遇到非三角形形状物体就需要Intersection Shader来定义求交规则，
         每次求交成功了就把求交的点存进Any Hit。Any Hit中定义了用户是否认可这个最近点
@@ -136,8 +136,8 @@ protected:
     */
 
 public:
-	bool denoiserOn = false;
-	bool accumulate = true;
+    bool denoiserOn = false;
+    bool accumulate = true;
 
     // 这个文件是定义了一个缓冲区结构体，管线会不断将光追结果写入这个结构体。
     LaunchParams launchParams;

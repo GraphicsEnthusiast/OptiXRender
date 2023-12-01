@@ -86,16 +86,16 @@ extern "C" __global__ void __closesthit__radiance() {
         + v * sbtData.texcoord[index.z];
 
 
-    if(sbtData.material.albedoTextureID != -1) {
+    if (sbtData.material.albedoTextureID != -1) {
         sbtData.material.albedo = (vec3f)tex2D<float4>(sbtData.material.albedo_texture, tc.x, tc.y);
     }
-    if(sbtData.material.roughnessTextureID != -1) {
+    if (sbtData.material.roughnessTextureID != -1) {
         sbtData.material.roughness = tex2D<float4>(sbtData.material.roughness_texture, tc.x, tc.y).x;
     }
-    if(sbtData.material.anisotropyTextureID != -1) {
+    if (sbtData.material.anisotropyTextureID != -1) {
         sbtData.material.anisotropy = tex2D<float4>(sbtData.material.anisotropy_texture, tc.x, tc.y).x;
     }
-    if(sbtData.material.specularTextureID != -1) {
+    if (sbtData.material.specularTextureID != -1) {
         sbtData.material.specular = (vec3f)tex2D<float4>(sbtData.material.specular_texture, tc.x, tc.y);
     }
 
@@ -160,7 +160,7 @@ extern "C" __global__ void __raygen__renderFrame() {
 
     auto lightTrace = [&lights](const Ray& ray, vec3f& light_radiance, float& light_pdf, float closest_distance) -> bool {
         bool hitLight = false;
-        for(int i = 0; i < lights.lightSize; i++) {
+        for (int i = 0; i < lights.lightSize; i++) {
             const Light& light = lights.lightsBuffer[i];
             float light_distance = FLT_MAX;
             vec3f Li = EvaluateLight(light, ray, closest_distance, light_pdf, light_distance);
@@ -177,7 +177,7 @@ extern "C" __global__ void __raygen__renderFrame() {
         return hitLight;
     };
 
-    for(int sampleID = 0; sampleID < numPixelSamples; sampleID++) {
+    for (int sampleID = 0; sampleID < numPixelSamples; sampleID++) {
         // normalized screen plane position, in [0,1]^2
 
         // iw: note for denoising that's not actually correct - if we
@@ -209,7 +209,7 @@ extern "C" __global__ void __raygen__renderFrame() {
         prd.isect.distance = 0.0f;
         prd.isect.position = ray.origin;
 
-        for(int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
+        for (int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
             //*************************场景中的物体以及灯光求交*************************
             // 分别遍历场景中的物体以及光源，记录最近的那个
             optixTrace(optixLaunchParams.traversable,
@@ -226,9 +226,9 @@ extern "C" __global__ void __raygen__renderFrame() {
                 u0, u1);
 
             closest_distance = prd.isect.distance;
-            if(lightTrace(ray, light_radiance, light_pdf, closest_distance)) {
+            if (lightTrace(ray, light_radiance, light_pdf, closest_distance)) {
                 float misWeight = 1.0f;
-                if(bounce != 0) {
+                if (bounce != 0) {
                     misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
                 }
                 radiance += misWeight * history * light_radiance;
@@ -239,7 +239,7 @@ extern "C" __global__ void __raygen__renderFrame() {
 
             // 没有击中任何物体，积累背景色
             bool notHit = prd.isect.distance == FLT_MAX;
-            if(notHit) {
+            if (notHit) {
                 //vec3f unit_direction = normalize(- V);
                 //float t = 0.5f * (unit_direction.y + 1.0f);
                 //vec3f backColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
@@ -254,7 +254,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                 break;
             }
 
-            if(lights.lightSize != 0) {
+            if (lights.lightSize != 0) {
                 // uniform sample one light
                 int index = clamp(int(lights.lightSize * prd.random()), 0, lights.lightSize - 1);
                 const Light& light = lights.lightsBuffer[index];
@@ -281,10 +281,10 @@ extern "C" __global__ void __raygen__renderFrame() {
                     u0, u1);
 
                 vec3f tv; float t;
-                if(!lightTrace(shadowRay, tv, t, light_distance - EPS) && prd.lightVisible) {
+                if (!lightTrace(shadowRay, tv, t, light_distance - EPS) && prd.lightVisible) {
                     bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
                     float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
-                    if(!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(light_pdf) || !IsValid(costheta)) {
+                    if (!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(light_pdf) || !IsValid(costheta)) {
                         break;
                     }
                     float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
@@ -297,14 +297,14 @@ extern "C" __global__ void __raygen__renderFrame() {
             // 采样物体表面材质
             bsdf = SampleMaterial(prd.isect, prd.random, V, L, bsdf_pdf);
             float costheta = abs(dot(prd.isect.shadeNormal, L));
-            if(!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
+            if (!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
                 break;
             }
             history *= bsdf * costheta / bsdf_pdf;
 
             // 俄罗斯轮盘赌
             float prr = min((history.x + history.y + history.z) / 3.0f, 1.0f);
-            if(prd.random() > prr) {
+            if (prd.random() > prr) {
                 break;
             }
             history /= prr;

@@ -7,12 +7,12 @@
 using namespace gdt;
 
 struct Camera {
-	/*! camera position - *from* where we are looking */
-	vec3f from;
-	/*! which point we are looking *at* */
-	vec3f at;
-	/*! general up-vector */
-	vec3f up;
+    /*! camera position - *from* where we are looking */
+    vec3f from;
+    /*! which point we are looking *at* */
+    vec3f at;
+    /*! general up-vector */
+    vec3f up;
 };
 
 enum MaterialType {
@@ -38,7 +38,7 @@ struct Material {
     cudaTextureObject_t anisotropy_texture;
 
     vec3f eta{ 0.14282f, 0.37414f, 1.43944f };
-	vec3f k{ 3.97472f, 2.38066f, 1.59981f };
+    vec3f k{ 3.97472f, 2.38066f, 1.59981f };
 
     float int_ior = 1.5f;
     float ext_ior = 1.0f;
@@ -52,9 +52,9 @@ struct Material {
     float* bsdf_avg_buffer = NULL;
     float* albedo_avg_buffer = NULL;
 };
-  
-  /*! a simple indexed triangle mesh that our sample renderer will
-      render */
+
+/*! a simple indexed triangle mesh that our sample renderer will
+    render */
 struct TriangleMesh {
     TriangleMesh(const std::string& objFile);
 
@@ -72,25 +72,25 @@ enum LightType {
 };
 
 struct Light {
-    LightType type = LightType::Quad;
+    LightType type = LightType::Sphere;
     bool doubleSide = false;
-	vec3f radiance = 3.0f;
+    vec3f radiance = 3.0f;
     vec3f position{ -3.0f, 12.0f, -3.0f };
 
     vec3f u{ 0.0f, 0.0f, 6.0f };
     vec3f v{ 6.0f, 0.0f, 0.0f };
 
-    float radius = 1.0f;
+    float radius = 3.0f;
 };
-  
+
 struct Texture {
     Texture();
     ~Texture();
-    
+
     uint32_t* pixel{ nullptr };
     vec2i resolution{ -1 };
 };
-  
+
 class Scene {
 public:
     Scene() = default;
@@ -98,7 +98,7 @@ public:
 
     void LoadMesh(const std::string& objFile);
     void AddLight(const Light& l);
-    
+
 public:
     std::vector<TriangleMesh*> meshes;
     std::vector<Texture*> textures;
