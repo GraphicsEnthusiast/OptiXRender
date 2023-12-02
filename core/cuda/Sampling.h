@@ -135,12 +135,27 @@ public:
 		}
 	}
 
+	~AliasTable2D() {
+		if (rowAlia) {
+			free(rowAlia);
+		}
+		if (rowProb) {
+			free(rowProb);
+		}
+		if (colAlia) {
+			free(colAlia);
+		}
+		if (colProb) {
+			free(colProb);
+		}
+	}
+
 public:
     std::vector<AliasTable1D> rowTables;// 行
 	AliasTable1D colTable;// 列
-	int* rowAlia;
-	float* rowProb;
-	int* colAlia;
-	float* colProb;
+	int* rowAlia = NULL;
+	float* rowProb = NULL;
+	int* colAlia = NULL;
+	float* colProb = NULL;
 };
 //*************************************alias table*************************************

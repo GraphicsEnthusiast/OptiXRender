@@ -122,6 +122,7 @@ namespace osc {
     extern "C" int main(int ac, char** av)
     {
         TextureName textureName;
+        Material material;
         textureName.albedoFile = "../../models/clock_albedo.bmp";
         try {
             Scene scene;
@@ -130,6 +131,7 @@ namespace osc {
                 // on windows, visual studio creates _two_ levels of build dir
                 // (x86/Release)
                 "../../models/clock.obj",
+                material,
                 textureName
 #else
                 // on linux, common practice is to have ONE level of build dir

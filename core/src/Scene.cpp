@@ -15,10 +15,9 @@ Scene::~Scene() {
 	}
 }
 
-void Scene::AddMesh(const std::string& objFile, const TextureName& textureName) {
+void Scene::AddMesh(const std::string& objFile, Material& material, const TextureName& textureName) {
 	TriangleMesh* mesh = new TriangleMesh();
-	Material material;
-
+	
 	if (textureName.albedoFile != "") {
 		material.albedoTextureID = this->textures.size();
 		AddTexture(textureName.albedoFile);

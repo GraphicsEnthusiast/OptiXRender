@@ -104,7 +104,6 @@ struct Texture {
     ~Texture();
 
     uint32_t* pixel{ nullptr };
-    float* hdr_pixel{ nullptr };
     vec2i resolution{ -1 };
 };
 //*************************************texture*************************************
@@ -115,7 +114,7 @@ public:
     Scene() = default;
     ~Scene();
 
-    void AddMesh(const std::string& objFile, const TextureName& textureName);
+    void AddMesh(const std::string& objFile, Material& material, const TextureName& textureName);
     void AddTexture(const std::string& fileName);
     void AddLight(const Light& l);
 
