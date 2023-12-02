@@ -114,7 +114,7 @@ public:
 	    for (int i = 0; i < height; i++) {
 		    std::vector<float> table(pdf + i * width, pdf + (i + 1) * width);
 		    AliasTable1D rowDistrib(table);
-		    rowTables.push_back(rowDistrib);
+		    rowTables.emplace_back(rowDistrib);
 		    colDistrib[i] = rowDistrib.sumDistrib;
 	    }
 	    colTable = AliasTable1D(colDistrib);

@@ -67,7 +67,7 @@ extern "C" __global__ void __closesthit__shadow() {
 }
 
 extern "C" __global__ void __closesthit__radiance() {
-    TriangleMeshSBTData& sbtData = *(TriangleMeshSBTData*)optixGetSbtDataPointer();
+    const TriangleMeshSBTData& sbtData = *(const TriangleMeshSBTData*)optixGetSbtDataPointer();
     PRD& prd = *GetPRD<PRD>();
 
     const int primID = optixGetPrimitiveIndex();
@@ -85,18 +85,18 @@ extern "C" __global__ void __closesthit__radiance() {
         + u * sbtData.texcoord[index.y]
         + v * sbtData.texcoord[index.z];
 
-
-    if (sbtData.material.albedoTextureID != -1) {
-        sbtData.material.albedo = (vec3f)tex2D<float4>(sbtData.material.albedo_texture, tc.x, tc.y);
+    Material material = sbtData.material;
+    if (material.albedoTextureID != -1) {
+        material.albedo = (vec3f)tex2D<float4>(material.albedo_texture, tc.x, tc.y);
     }
-    if (sbtData.material.roughnessTextureID != -1) {
-        sbtData.material.roughness = tex2D<float4>(sbtData.material.roughness_texture, tc.x, tc.y).x;
+    if (material.roughnessTextureID != -1) {
+        material.roughness = tex2D<float4>(material.roughness_texture, tc.x, tc.y).x;
     }
-    if (sbtData.material.anisotropyTextureID != -1) {
-        sbtData.material.anisotropy = tex2D<float4>(sbtData.material.anisotropy_texture, tc.x, tc.y).x;
+    if (material.anisotropyTextureID != -1) {
+        material.anisotropy = tex2D<float4>(material.anisotropy_texture, tc.x, tc.y).x;
     }
-    if (sbtData.material.specularTextureID != -1) {
-        sbtData.material.specular = (vec3f)tex2D<float4>(sbtData.material.specular_texture, tc.x, tc.y);
+    if (material.specularTextureID != -1) {
+        material.specular = (vec3f)tex2D<float4>(material.specular_texture, tc.x, tc.y);
     }
 
     const vec3f surfPos = (1.0f - u - v) * sbtData.vertex[index.x]
@@ -106,7 +106,7 @@ extern "C" __global__ void __closesthit__radiance() {
     prd.isect.SetFaceNormal(rayDir, Ns);
     prd.isect.distance = length(surfPos - prd.isect.position);
     prd.isect.position = surfPos;
-    prd.isect.material = sbtData.material;
+    prd.isect.material = material;
 }
 
 extern "C" __global__ void __anyhit__radiance() { /*! for this simple example, this will remain empty */

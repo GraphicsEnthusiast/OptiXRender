@@ -121,13 +121,16 @@ namespace osc {
       world, then exit */
     extern "C" int main(int ac, char** av)
     {
+        TextureName textureName;
+        textureName.albedoFile = "../../models/clock_albedo.bmp";
         try {
             Scene scene;
-            scene.LoadMesh(
+            scene.AddMesh(
 #ifdef _WIN32
                 // on windows, visual studio creates _two_ levels of build dir
                 // (x86/Release)
-                "../../models/teapot.obj"
+                "../../models/clock.obj",
+                textureName
 #else
                 // on linux, common practice is to have ONE level of build dir
                 // (say, <project>/build/)...

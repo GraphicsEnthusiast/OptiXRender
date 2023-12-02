@@ -15,8 +15,28 @@ Scene::~Scene() {
 	}
 }
 
-void Scene::LoadMesh(const std::string& objFile) {
-	TriangleMesh* mesh = new TriangleMesh(objFile);
+void Scene::AddMesh(const std::string& objFile, const TextureName& textureName) {
+	TriangleMesh* mesh = new TriangleMesh();
+	Material material;
+
+	if (textureName.albedoFile != "") {
+		material.albedoTextureID = this->textures.size();
+		AddTexture(textureName.albedoFile);
+	}
+	if (textureName.anisotropyFile != "") {
+		material.anisotropyTextureID = this->textures.size();
+		AddTexture(textureName.anisotropyFile);
+	}
+	if (textureName.roughnessFile != "") {
+		material.roughnessTextureID = this->textures.size();
+		AddTexture(textureName.roughnessFile);
+	}
+	if (textureName.specularFile != "") {
+		material.specularTextureID = this->textures.size();
+		AddTexture(textureName.specularFile);
+	}
+
+	mesh->LoadMesh(objFile, material);
 	this->meshes.emplace_back(mesh);
 
 	for (auto vtx : mesh->vertex) {
@@ -24,11 +44,16 @@ void Scene::LoadMesh(const std::string& objFile) {
 	}
 }
 
+void Scene::AddTexture(const std::string& fileName) {
+	Texture* texture = new Texture(fileName);
+	textures.emplace_back(texture);
+}
+
 void Scene::AddLight(const Light& l) {
 	lights.emplace_back(l);
 }
 
-TriangleMesh::TriangleMesh(const std::string& objFile) {
+void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material) {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
@@ -38,6 +63,8 @@ TriangleMesh::TriangleMesh(const std::string& objFile) {
 	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, objFile.c_str()) || shapes.size() == 0) {
 		throw std::runtime_error("Could not read OBJ model from " + objFile + " : " + err);
 	}
+
+	this->material = material;
 
 	// loop over shapes
 	for (size_t s = 0; s < shapes.size(); ++s) {
@@ -117,15 +144,29 @@ TriangleMesh::TriangleMesh(const std::string& objFile) {
 			int index = this->index.size();
 			this->index.emplace_back(vec3i(3 * index, 3 * index + 1, 3 * index + 2));
 
-			this->material = Material();
-
 			index_offset += fv;
 		}
 	}
 }
 
-Texture::Texture() {
-
+Texture::Texture(const std::string& fileName) {
+	vec2i res;
+	int comp;
+	unsigned char* image = stbi_load(fileName.c_str(), &res.x, &res.y, &comp, STBI_rgb_alpha);
+	if (image) {
+		this->resolution = res;
+		this->pixel = (uint32_t*)image;
+		/* iw - actually, it seems that stbi loads the pictures
+		   mirrored along the y axis - mirror them here */
+		for (int y = 0; y < res.y / 2; y++) {
+			uint32_t* line_y = this->pixel + y * res.x;
+			uint32_t* mirrored_y = this->pixel + (res.y - 1 - y) * res.x;
+			int mirror_y = res.y - 1 - y;
+			for (int x = 0; x < res.x; x++) {
+				std::swap(line_y[x], mirrored_y[x]);
+			}
+		}
+	}
 }
 
 Texture::~Texture() {

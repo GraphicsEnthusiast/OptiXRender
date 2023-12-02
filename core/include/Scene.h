@@ -6,6 +6,7 @@
 
 using namespace gdt;
 
+//*************************************camera*************************************
 struct Camera {
     /*! camera position - *from* where we are looking */
     vec3f from;
@@ -14,7 +15,9 @@ struct Camera {
     /*! general up-vector */
     vec3f up;
 };
+//*************************************camera*************************************
 
+//*************************************material*************************************
 enum MaterialType {
     Diffuse,
     Conductor,
@@ -52,11 +55,13 @@ struct Material {
     float* bsdf_avg_buffer = NULL;
     float* albedo_avg_buffer = NULL;
 };
+//*************************************material*************************************
 
-/*! a simple indexed triangle mesh that our sample renderer will
-    render */
+//*************************************triangle mesh*************************************
 struct TriangleMesh {
-    TriangleMesh(const std::string& objFile);
+    TriangleMesh() = default;
+
+    void LoadMesh(const std::string& objFile, const Material& material);
 
     std::vector<vec3f> vertex;
     std::vector<vec3f> normal;
@@ -65,7 +70,9 @@ struct TriangleMesh {
 
     Material material;
 };
+//*************************************triangle mesh*************************************
 
+//*************************************light*************************************
 enum LightType {
     Quad,
     Sphere
@@ -75,29 +82,41 @@ struct Light {
     LightType type = LightType::Sphere;
     bool doubleSide = false;
     vec3f radiance = 3.0f;
-    vec3f position{ -3.0f, 12.0f, -3.0f };
+    vec3f position{ 6.0f, 2.0f, 0.0f };
 
     vec3f u{ 0.0f, 0.0f, 6.0f };
     vec3f v{ 6.0f, 0.0f, 0.0f };
 
     float radius = 3.0f;
 };
+//*************************************light*************************************
+
+//*************************************texture*************************************
+struct TextureName {
+	std::string albedoFile = "";
+	std::string roughnessFile = "";
+	std::string anisotropyFile = "";
+	std::string specularFile = "";
+};
 
 struct Texture {
-    Texture();
+    Texture(const std::string& fileName);
     ~Texture();
 
     uint32_t* pixel{ nullptr };
     float* hdr_pixel{ nullptr };
     vec2i resolution{ -1 };
 };
+//*************************************texture*************************************
 
+//*************************************scene*************************************
 class Scene {
 public:
     Scene() = default;
     ~Scene();
 
-    void LoadMesh(const std::string& objFile);
+    void AddMesh(const std::string& objFile, const TextureName& textureName);
+    void AddTexture(const std::string& fileName);
     void AddLight(const Light& l);
 
 public:
@@ -107,3 +126,4 @@ public:
     //! bounding box of all vertices in the scene
     box3f bounds;
 };
+//*************************************scene*************************************

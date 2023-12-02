@@ -8,6 +8,12 @@
         "queue": "cpp",
         "chrono": "cpp",
         "memory": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "array": "cpp",
+        "xstring": "cpp",
+        "iterator": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "filesystem": "cpp"
     }
 }
