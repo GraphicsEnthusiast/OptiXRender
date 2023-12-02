@@ -24,7 +24,7 @@ struct TriangleMeshSBTData {
 
 struct LaunchParams {
 	int numPixelSamples = 1;
-	int maxBounce = 50;
+	int maxBounce = 5;
 	struct {
 		int frameID = 0;
 		float4* colorBuffer;
@@ -46,6 +46,16 @@ struct LaunchParams {
 		int lightSize = 0;
 		Light* lightsBuffer;
 	} lights;
+
+	struct {
+		int envTextureID = -1;
+		cudaTextureObject_t envMap;
+
+		int* rowAlia = NULL;
+		float* rowProb = NULL;
+		int* colAlia = NULL;
+		float* colProb = NULL;
+	} environemnt;
 
 	OptixTraversableHandle traversable;
 };

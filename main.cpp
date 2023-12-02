@@ -139,6 +139,7 @@ namespace osc {
                 "../models/sponza.obj"
 #endif
             );
+            scene.AddEnvMap("../../models/spaichingen_hill_4k.hdr");
             Camera camera = { /*from*/vec3f(10.0f, 10.0f, 10.0f),
                 /* at */scene.bounds.center(),
                 /* up */vec3f(0.f,1.f,0.f) };

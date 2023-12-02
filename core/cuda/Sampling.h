@@ -11,6 +11,29 @@ __forceinline__ __device__ float PowerHeuristic(float pdf1, float pdf2, int beta
 	return p1 / (p1 + p2);
 }
 
+__forceinline__ __device__ vec3f PlaneToSphere(const vec2f& uv) {
+	vec2f xy = uv;
+	xy.y = 1.0f - xy.y; //flip y
+
+	//获取角度
+	float phi = M_2PIf * (xy.x - 0.5f);    //[-pi ~ pi]
+	float theta = M_PIf * (xy.y - 0.5f);        //[-pi/2 ~ pi/2]   
+
+	//球坐标计算方向
+	vec3f L = normalize(vec3f(cos(theta) * cos(phi), sin(theta), cos(theta) * sin(phi)));
+
+	return L;
+}
+
+__forceinline__ __device__ vec2f SphereToPlane(const vec3f& v) {
+	vec2f uv(atan2(v.z, v.x), asin(v.y));
+	uv.x /= M_2PIf;
+	uv.y /= M_PIf;
+	uv += 0.5f;
+
+	return uv;
+}
+
 //*************************************cone*************************************
 __forceinline__ __device__ vec3f UniformSampleCone(const vec2f& sample, float cos_angle) {
 	vec3f p = 0.0f;
@@ -19,8 +42,8 @@ __forceinline__ __device__ vec3f UniformSampleCone(const vec2f& sample, float co
 	float cos_theta = mix(cos_angle, 1.0f, sample.y);
 	float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
 
-	p.x = sin_theta * cosf(phi);
-	p.y = sin_theta * sinf(phi);
+	p.x = sin_theta * cos(phi);
+	p.y = sin_theta * sin(phi);
 	p.z = cos_theta;
 
 	return normalize(p);

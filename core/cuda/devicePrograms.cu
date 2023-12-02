@@ -250,6 +250,11 @@ extern "C" __global__ void __raygen__renderFrame() {
                 //   misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
                 //}
                 //radiance += misWeight * backColor * history;
+                if (optixLaunchParams.environemnt.envTextureID != -1 && bounce == 0) {
+                    vec2f uv = SphereToPlane(ray.direction);
+                    vec4f fromTexture = tex2D<float4>(optixLaunchParams.environemnt.envMap, uv.x, uv.y);
+                    radiance += (vec3f)fromTexture;
+                }
 
                 break;
             }

@@ -142,7 +142,7 @@ __forceinline__ __device__ vec3f SampleSphere(const Light& light, const vec3f& h
 //*************************************sphere*************************************
 
 //*************************************infinite area*************************************
-__forceinline__ __host__ AliasTable2D ComputeInfiniteAliasTable(float* data, int nx, int ny, int nn) {
+__forceinline__ __host__ AliasTable2D ComputeInfiniteAliasTable(uint32_t* data, int nx, int ny, int nn) {
     float* pdf = new float[nx * ny];
 	float sum = 0.0f;
 	for (int j = 0; j < ny; j++) {

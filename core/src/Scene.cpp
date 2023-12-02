@@ -13,11 +13,14 @@ Scene::~Scene() {
 	for (auto texture : textures) {
 		delete texture;
 	}
+	if (envMap) {
+		delete envMap;
+	}
 }
 
 void Scene::AddMesh(const std::string& objFile, Material& material, const TextureName& textureName) {
 	TriangleMesh* mesh = new TriangleMesh();
-	
+
 	if (textureName.albedoFile != "") {
 		material.albedoTextureID = this->textures.size();
 		AddTexture(textureName.albedoFile);
@@ -50,6 +53,10 @@ void Scene::AddTexture(const std::string& fileName) {
 
 void Scene::AddLight(const Light& l) {
 	lights.emplace_back(l);
+}
+
+void Scene::AddEnvMap(const std::string& fileName) {
+	envMap = new Texture(fileName);
 }
 
 void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material) {
@@ -150,11 +157,13 @@ void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material
 
 Texture::Texture(const std::string& fileName) {
 	vec2i res;
-	int comp;
-	unsigned char* image = stbi_load(fileName.c_str(), &res.x, &res.y, &comp, STBI_rgb_alpha);
+	int t_comp;
+	unsigned char* image = stbi_load(fileName.c_str(), &res.x, &res.y, &t_comp, STBI_rgb_alpha);
+	this->resolution = res;
+	this->comp = STBI_rgb_alpha;
+	this->pixel = (uint32_t*)image;
+
 	if (image) {
-		this->resolution = res;
-		this->pixel = (uint32_t*)image;
 		/* iw - actually, it seems that stbi loads the pictures
 		   mirrored along the y axis - mirror them here */
 		for (int y = 0; y < res.y / 2; y++) {

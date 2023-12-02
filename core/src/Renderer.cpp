@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "LaunchParams.h"
 #include "../cuda/Material.h"
+#include "../cuda/Light.h"
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
@@ -43,6 +44,13 @@ Renderer::Renderer(const Scene* scene) : scene(scene) {
     launchParams.lights.lightsBuffer = (Light*)lightsBuffer.d_pointer();
     launchParams.lights.lightSize = this->scene->lights.size();
 
+//     if (scene->envMap != NULL) {
+//         Texture* envMap = scene->envMap;
+//         AliasTable2D table = ComputeInfiniteAliasTable((float*)(envMap)->pixel, envMap->resolution.x, envMap->resolution.y, envMap->comp);
+//         CUDABuffer rowAlia, rowProb, colAlia, colProb;
+// 
+//     }
+
     std::cout << "creating optix context ..." << std::endl;
     CreateContext();
 
@@ -76,12 +84,22 @@ Renderer::Renderer(const Scene* scene) : scene(scene) {
 
 void Renderer::CreateTextures() {
     int numTextures = (int)scene->textures.size();
+    if (scene->envMap != NULL) {
+        numTextures++;
+    }
 
     textureArrays.resize(numTextures);
     textureObjects.resize(numTextures);
 
     for (int textureID = 0; textureID < numTextures; textureID++) {
-        auto texture = scene->textures[textureID];
+        Texture* texture = NULL;
+        if (scene->envMap != NULL && textureID == numTextures - 1) {
+            texture = scene->envMap;
+            launchParams.environemnt.envTextureID = textureID;
+        }
+        else {
+            texture = scene->textures[textureID];
+        }
 
         cudaResourceDesc res_desc = {};
 
@@ -123,6 +141,10 @@ void Renderer::CreateTextures() {
         cudaTextureObject_t cuda_tex = 0;
         CUDA_CHECK(CreateTextureObject(&cuda_tex, &res_desc, &tex_desc, nullptr));
         textureObjects[textureID] = cuda_tex;
+    }
+
+    if (scene->envMap != NULL) {
+        launchParams.environemnt.envMap = textureObjects[numTextures - 1];
     }
 }
 
@@ -526,7 +548,6 @@ void Renderer::CreatePipeline() {
 /*! constructs the shader binding table */
 void Renderer::BuildSBT() {
     // ´´½¨ Kulla-Conty LUT
-    std::cout << "create kulla conty table..." << std::endl;
     std::vector<float> bsdf_avg(kLutResolution * kLutResolution),
         bsdf_albedo_avg(kLutResolution);
     ComputeKullaConty(bsdf_avg.data(), bsdf_albedo_avg.data());
