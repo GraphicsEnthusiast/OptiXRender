@@ -13,9 +13,6 @@ Scene::~Scene() {
 	for (auto texture : textures) {
 		delete texture;
 	}
-	if (envMap) {
-		delete envMap;
-	}
 }
 
 void Scene::AddMesh(const std::string& objFile, Material& material, const TextureName& textureName) {
@@ -53,10 +50,6 @@ void Scene::AddTexture(const std::string& fileName) {
 
 void Scene::AddLight(const Light& l) {
 	lights.emplace_back(l);
-}
-
-void Scene::AddEnvMap(const std::string& fileName) {
-	envMap = new Texture(fileName);
 }
 
 void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material) {

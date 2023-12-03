@@ -118,13 +118,11 @@ public:
     void AddMesh(const std::string& objFile, Material& material, const TextureName& textureName);
     void AddTexture(const std::string& fileName);
     void AddLight(const Light& l);
-    void AddEnvMap(const std::string& fileName);
 
 public:
     std::vector<TriangleMesh*> meshes;
     std::vector<Texture*> textures;
     std::vector<Light> lights;
-    Texture* envMap = NULL;
     //! bounding box of all vertices in the scene
     box3f bounds;
 };

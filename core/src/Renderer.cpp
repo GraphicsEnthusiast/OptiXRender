@@ -77,33 +77,11 @@ Renderer::Renderer(const Scene* scene) : scene(scene) {
 
 void Renderer::CreateTextures() {
     int numTextures = (int)scene->textures.size();
-    if (scene->envMap != NULL) {
-        numTextures++;
-    }
-
     textureArrays.resize(numTextures);
     textureObjects.resize(numTextures);
 
     for (int textureID = 0; textureID < numTextures; textureID++) {
-        Texture* texture = NULL;
-        if (scene->envMap != NULL && textureID == numTextures - 1) {
-            texture = scene->envMap;
-            launchParams.environment.envTextureID = textureID;
-
-            int nx = texture->resolution.x;
-            int ny = texture->resolution.y;
-            int nn = texture->comp;
-            AliasTable table = ComputeInfiniteAliasTable(texture->pixel, nx, ny, nn);
-
-            launchParams.environment.height = ny;
-            launchParams.environment.width = nx;
-            launchParams.environment.sumPower = table.sumPower;
-            launchParams.environment.length = table.length;
-            launchParams.environment.devBinomDistribs = table.devBinomDistribs;
-        }
-        else {
-            texture = scene->textures[textureID];
-        }
+        Texture* texture = scene->textures[textureID];
 
         cudaResourceDesc res_desc = {};
 
@@ -145,10 +123,6 @@ void Renderer::CreateTextures() {
         cudaTextureObject_t cuda_tex = 0;
         CUDA_CHECK(CreateTextureObject(&cuda_tex, &res_desc, &tex_desc, nullptr));
         textureObjects[textureID] = cuda_tex;
-    }
-
-    if (scene->envMap != NULL) {
-        launchParams.environment.envMap = textureObjects[numTextures - 1];
     }
 }
 

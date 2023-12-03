@@ -53,15 +53,6 @@ struct LaunchParams {
 		Light* lightsBuffer;
 	} lights;
 
-	struct {
-		int envTextureID = -1;
-		int width, height;
-		cudaTextureObject_t envMap;
-		int length = 0;
-		BinomialDistrib* devBinomDistribs;
-		float sumPower;
-	} environment;
-
 	OptixTraversableHandle traversable;
 };
 
