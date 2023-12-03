@@ -93,8 +93,6 @@ void Renderer::CreateTextures() {
             int nx = texture->resolution.x;
             int ny = texture->resolution.y;
             int nn = texture->comp;
-            nx /= nn;
-            ny /= nn;
             AliasTable table = ComputeInfiniteAliasTable(texture->pixel, nx, ny, nn);
 
             launchParams.environment.height = ny;
@@ -112,7 +110,7 @@ void Renderer::CreateTextures() {
         cudaChannelFormatDesc channel_desc;
         int32_t width = texture->resolution.x;
         int32_t height = texture->resolution.y;
-        int32_t numComponents = 4;
+        int32_t numComponents = texture->comp;
         int32_t pitch = width * numComponents * sizeof(uint8_t);
         channel_desc = cudaCreateChannelDesc<uchar4>();
 

@@ -142,15 +142,13 @@ __forceinline__ __device__ vec3f SampleSphere(const Light& light, const vec3f& h
 //*************************************sphere*************************************
 
 //*************************************infinite area*************************************
-__forceinline__ __host__ AliasTable ComputeInfiniteAliasTable(uint32_t* data, int nx, int ny, int nn) {
+__forceinline__ __host__ AliasTable ComputeInfiniteAliasTable(uint8_t* data, int nx, int ny, int nn) {
 	std::vector<float> pdf;
 	pdf.resize(nx * ny);
-	float sum = 0.0f;
 	for (int j = 0; j < ny; j++) {
 		for (int i = 0; i < nx; i++) {
 			vec3f l(data[nn * (j * nx + i)], data[nn * (j * nx + i) + 1], data[nn * (j * nx + i) + 2]);
 			pdf[j * nx + i] = Luminance(l) * sin((float)(j + 0.5f) / ny * M_PIf);
-			sum += pdf[j * nx + i];
 		}
 	}
 	AliasTable table;
@@ -166,12 +164,13 @@ __forceinline__ __device__ vec2f SampleInfinite(int length, int width, int heigh
 	int y = pixId / width;
 	int x = pixId - y * width;
 
-	world_L = PlaneToSphere(vec2f((0.5f + x) / width, (0.5f + y) / height));
+    vec2f uv(((0.5f + x) / width, (0.5f + y) / height));
+	world_L = PlaneToSphere(uv);
 
-	return vec2f(x, y);
+	return uv;
 }
 
-__forceinline__ __device__ float PdfInfinite(int width, int height, const vec3f& world_L, const vec3f& radiance, float sumPower) {
+__forceinline__ __device__ float PdfInfinite(int width, int height, const vec3f& radiance, float sumPower) {
 	float pdf = (Luminance(radiance) / sumPower) * width * height * sqr(M_1_PIf) * 0.5f;
 
 	return pdf;

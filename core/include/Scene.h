@@ -103,7 +103,7 @@ struct Texture {
     Texture(const std::string& fileName);
     ~Texture();
 
-    uint32_t* pixel{ nullptr };
+    uint8_t* pixel{ nullptr };
     vec2i resolution{ -1 };
     int comp{ 4 };
 };

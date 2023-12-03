@@ -158,23 +158,11 @@ void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material
 Texture::Texture(const std::string& fileName) {
 	vec2i res;
 	int t_comp;
-	unsigned char* image = stbi_load(fileName.c_str(), &res.x, &res.y, &t_comp, STBI_rgb_alpha);
+	stbi_set_flip_vertically_on_load(true);
+	uint8_t* image = stbi_load(fileName.c_str(), &res.x, &res.y, &t_comp, STBI_rgb_alpha);
 	this->resolution = res;
 	this->comp = STBI_rgb_alpha;
-	this->pixel = (uint32_t*)image;
-
-	if (image) {
-		/* iw - actually, it seems that stbi loads the pictures
-		   mirrored along the y axis - mirror them here */
-		for (int y = 0; y < res.y / 2; y++) {
-			uint32_t* line_y = this->pixel + y * res.x;
-			uint32_t* mirrored_y = this->pixel + (res.y - 1 - y) * res.x;
-			int mirror_y = res.y - 1 - y;
-			for (int x = 0; x < res.x; x++) {
-				std::swap(line_y[x], mirrored_y[x]);
-			}
-		}
-	}
+	this->pixel = image;
 }
 
 Texture::~Texture() {
