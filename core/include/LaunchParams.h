@@ -6,6 +6,12 @@
 
 using namespace gdt;
 
+// alias method data
+struct BinomialDistrib {
+	float prob;
+	int failId;
+};
+
 // for this simple example, we have a single ray type
 enum {
 	RADIANCE_RAY_TYPE = 0,
@@ -49,13 +55,12 @@ struct LaunchParams {
 
 	struct {
 		int envTextureID = -1;
+		int width, height;
 		cudaTextureObject_t envMap;
-
-		int* rowAlia = NULL;
-		float* rowProb = NULL;
-		int* colAlia = NULL;
-		float* colProb = NULL;
-	} environemnt;
+		int length = 0;
+		BinomialDistrib* devBinomDistribs;
+		float sumPower;
+	} environment;
 
 	OptixTraversableHandle traversable;
 };

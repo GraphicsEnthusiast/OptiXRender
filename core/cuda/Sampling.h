@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Utils.h"
+#include "CUDABuffer.h"
 #include <vector>
-#include <queue>
 
 __forceinline__ __device__ float PowerHeuristic(float pdf1, float pdf2, int beta) {
 	float p1 = pow(pdf1, beta);
@@ -76,109 +76,105 @@ __forceinline__ __device__ float CosinePdfHemisphere(float NdotL) {
 //*************************************cosine*************************************
 
 //*************************************alias table*************************************
-__host__ struct AliasTable1D {
-public:
-    AliasTable1D() = default;
-    AliasTable1D(const std::vector<float>& distrib) {
-		std::queue<Element> greater, lesser;
+/**
+* Transform a discrete distribution to a set of binomial distributions
+*   so that an O(1) sampling approach can be applied
+*/
+struct DiscreteSampler1D {
+	using Distrib = BinomialDistrib;
 
-	    sumDistrib = 0.0f;
-	    for (auto i : distrib) {
-		    sumDistrib += i;
-	    }
+	DiscreteSampler1D() = default;
+	DiscreteSampler1D(std::vector<float> values) {
+		for (const auto& val : values) {
+			sumAll += val;
+		}
+		float sumInv = static_cast<float>(values.size()) / sumAll;
 
-	    for (int i = 0; i < distrib.size(); i++) {
-		    float scaledPdf = distrib[i] * distrib.size();
-		    (scaledPdf >= sumDistrib ? greater : lesser).push(Element(i, scaledPdf));
-	    }
+		for (auto& val : values) {
+			val *= sumInv;
+		}
 
-	    table.resize(distrib.size(), Element(-1, 0.0f));
+		binomDistribs.resize(values.size());
+		std::vector<Distrib> stackGtOne(values.size() * 2);
+		std::vector<Distrib> stackLsOne(values.size() * 2);
+		int topGtOne = 0;
+		int topLsOne = 0;
 
-	    while (!greater.empty() && !lesser.empty()) {
-		    int l = lesser.front().first;
-			float pl = lesser.front().second;
-		    lesser.pop();
+		for (int i = 0; i < values.size(); i++) {
+			auto& val = values[i];
+			(val > static_cast<float>(1) ? stackGtOne[topGtOne++] : stackLsOne[topLsOne++]) = Distrib{ val, i };
+		}
 
-			int g = greater.front().first;
-			float pg = greater.front().second;
-		    greater.pop();
+		while (topGtOne && topLsOne) {
+			Distrib gt = stackGtOne[--topGtOne];
+			Distrib ls = stackLsOne[--topLsOne];
 
-		    table[l] = Element(g, pl);
+			binomDistribs[ls.failId] = Distrib{ ls.prob, gt.failId };
+			// Place ls in the table, and "fill" the rest of probability with gt.prob
+			gt.prob -= (static_cast<float>(1) - ls.prob);
+			// See if gt.prob is still greater than 1 that it needs more iterations to
+			//   be splitted to different binomial distributions
+			(gt.prob > static_cast<float>(1) ? stackGtOne[topGtOne++] : stackLsOne[topLsOne++]) = gt;
+		}
 
-		    pg += pl - sumDistrib;
-		    (pg < sumDistrib ? lesser : greater).push(Element(g, pg));
-	    }
+		for (int i = topGtOne - 1; i >= 0; i--) {
+			Distrib gt = stackGtOne[i];
+			binomDistribs[gt.failId] = gt;
+		}
 
-	    while (!greater.empty()) {
-		    int g = greater.front().first;
-			float pg = greater.front().second;
-		    greater.pop();
-		    table[g] = Element(g, pg);
-	    }
-
-	    while (!lesser.empty()) {
-		    int l = lesser.front().first;
-			float pl = lesser.front().second;
-		    lesser.pop();
-		    table[l] = Element(l, pl);
-	    }
+		for (int i = topLsOne - 1; i >= 0; i--) {
+			Distrib ls = stackLsOne[i];
+			binomDistribs[ls.failId] = ls;
+		}
 	}
 
-public:
-    typedef std::pair<int, float> Element;
-	std::vector<Element> table;
-	float sumDistrib;
+	void Clear() {
+		binomDistribs.clear();
+		sumAll = 0.0f;
+	}
+
+	int Sample(float r1, float r2) {
+		int passId = int(float(binomDistribs.size()) * r1);
+		Distrib distrib = binomDistribs[passId];
+
+		return (r2 < distrib.prob) ? passId : distrib.failId;
+	}
+
+	std::vector<Distrib> binomDistribs;
+	float sumAll = 0.0f;
 };
 
-__host__ struct AliasTable2D {
-public:
-    AliasTable2D(float* pdf, int width, int height) {
-		std::vector<float> colDistrib(height);
-	    for (int i = 0; i < height; i++) {
-		    std::vector<float> table(pdf + i * width, pdf + (i + 1) * width);
-		    AliasTable1D rowDistrib(table);
-		    rowTables.emplace_back(rowDistrib);
-		    colDistrib[i] = rowDistrib.sumDistrib;
-	    }
-	    colTable = AliasTable1D(colDistrib);
+struct DevDiscreteSampler1D {
+	using Distrib = BinomialDistrib;
 
-        colAlia = (int*)malloc(height);
-		colProb = (float*)malloc(height);
-		rowAlia = (int*)malloc(width * height);
-		rowProb = (float*)malloc(width * height);
-
-		for (int i = 0; i < height; i++) {
-			colAlia[i] = colTable.table[i].first;
-			colProb[i] = colTable.table[i].second;
-			for (int j = 0; j < width; j++) {
-				int index = i * width + j;
-				rowAlia[index] = rowTables[i].table[j].first;
-				rowProb[index] = rowTables[i].table[j].second;
-			}
+	void Create(const DiscreteSampler1D& hstSampler) {
+		CUDABuffer hstBuffer;
+		hstBuffer.alloc_and_upload(hstSampler.binomDistribs);
+		devBinomDistribs = (Distrib*)hstBuffer.d_pointer();
+		length = hstSampler.binomDistribs.size();
+		sumPower = hstSampler.sumAll;
+	}
+	void Destory() {
+		if (devBinomDistribs != nullptr) {
+			cudaFree(devBinomDistribs);
+			devBinomDistribs = nullptr;
 		}
+		length = 0;
 	}
 
-	~AliasTable2D() {
-		if (rowAlia) {
-			free(rowAlia);
-		}
-		if (rowProb) {
-			free(rowProb);
-		}
-		if (colAlia) {
-			free(colAlia);
-		}
-		if (colProb) {
-			free(colProb);
-		}
-	}
-
-public:
-    std::vector<AliasTable1D> rowTables;// 行
-	AliasTable1D colTable;// 列
-	int* rowAlia = NULL;
-	float* rowProb = NULL;
-	int* colAlia = NULL;
-	float* colProb = NULL;
+	Distrib* devBinomDistribs = nullptr;
+	int length = 0;
+	float sumPower;
 };
+
+__forceinline__ __device__ int SampleAliasTable(const vec2f& sample, int length, BinomialDistrib* devBinomDistribs) {
+	float r1 = sample.x;
+	float r2 = sample.y;
+	int passId = min(int(float(length) * r1), length - 1);
+	auto distrib = devBinomDistribs[passId];
+
+	return (r2 < distrib.prob) ? passId : distrib.failId;
+}
+
+typedef DevDiscreteSampler1D AliasTable;
 //*************************************alias table*************************************

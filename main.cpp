@@ -123,24 +123,35 @@ namespace osc {
     {
         TextureName textureName;
         Material material;
-        textureName.albedoFile = "../../models/clock_albedo.bmp";
+        textureName.albedoFile = "../../models/01_Head_Base_Color.png";
         try {
             Scene scene;
             scene.AddMesh(
-#ifdef _WIN32
-                // on windows, visual studio creates _two_ levels of build dir
-                // (x86/Release)
-                "../../models/clock.obj",
+                "../../models/head.obj",
                 material,
                 textureName
-#else
-                // on linux, common practice is to have ONE level of build dir
-                // (say, <project>/build/)...
-                "../models/sponza.obj"
-#endif
             );
-            scene.AddEnvMap("../../models/spaichingen_hill_4k.hdr");
-            Camera camera = { /*from*/vec3f(10.0f, 10.0f, 10.0f),
+            textureName.albedoFile = "../../models/02_Body_Base_Color.png";
+			scene.AddMesh(
+				"../../models/body.obj",
+				material,
+				textureName
+			);
+            textureName.albedoFile = "../../models/03_Base_Base_Color.png";
+			scene.AddMesh(
+				"../../models/base.obj",
+				material,
+				textureName
+			);
+            material.type = MaterialType::Diffuse;
+            textureName.albedoFile = "../../models/grid.jpg";
+			scene.AddMesh(
+				"../../models/plane.obj",
+				material,
+				textureName
+			);
+            //scene.AddEnvMap("../../models/spaichingen_hill_4k.hdr");
+            Camera camera = { /*from*/vec3f(0.2f, 0.2f, 0.2f),
                 /* at */scene.bounds.center(),
                 /* up */vec3f(0.f,1.f,0.f) };
 
@@ -148,6 +159,9 @@ namespace osc {
             // camera knows how much to move for any given user interaction:
             const float worldScale = length(scene.bounds.span());
             Light light;
+            light.position = vec3f(1.0f, 0.5f, 0.0f);
+            light.radius = 0.1f;
+            light.radiance = vec3f(15.0f);
             scene.AddLight(light);
             SampleWindow* window = new SampleWindow("RTRT_Render",
                 &scene, camera, worldScale);

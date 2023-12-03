@@ -5,16 +5,16 @@
 // this include may only appear in a single source file:
 #include <optix_function_table_definition.h>
 
-// .cuÎÄ¼ş±àÒë³öÀ´µÄ ptx »úÆ÷Âë
+// .cuæ–‡ä»¶ç¼–è¯‘å‡ºæ¥çš„ ptx æœºå™¨ç 
 extern "C" char embedded_ptx_code[];
 
-// Record ÊÇ SBT ÀïÃæÎ¬»¤µÄ×ÅÉ«Æ÷¼ÇÂ¼Ïî£¬ÓÃÀ´ºÍ³¡¾°ÖĞµÄ²ÄÖÊÊµÀı×öÓ³Éä°ó¶¨µÄ¡£
-// ÓÉÓÚ Record ¶ÔÓÚ×Ö½Ú¶ÔÆëÒªÇóºÜ¸ß£¬ËùÒÔÓÃµ½ÁË __align__ ¹Ø¼ü×Ö£»
-// Ã¿¸ö Record ¶¼ÓĞÒ»¸ö header ±íÊ¾¸Ã×ÅÉ«Æ÷ÊµÀıµÄ¾ä±ú¡£
-// ÓÉÓÚÒ»¸ö³¡¾°ÖĞÖ»ĞèÒªÒ»¸ö RaygenRecord ºÍÒ»¸ö MissRecord£¬
-// ËùÒÔËûÃÇÄÚ²¿Ö±½ÓÉùÃ÷³¡¾°Êı¾İ¼´¿É£¬¼´ void* data£»¶ø HitRecord ¿ÉÄÜ»áÓĞÈô¸É¸ö£¬
-// ·Ö±ğ¶ÔÓ¦²»Í¬µÄÎïÌå»ò²ÄÖÊ£¬ËùÒÔËûÃÇÄÚ²¿ĞèÒªÉùÃ÷Ò»¸ö int objectID£¬
-// ±íÊ¾µ±Ç°µÄ HitRecord °ó¶¨µÄÊÇ¼¸ºÅÎïÌå/²ÄÖÊ¡£
+// Record æ˜¯ SBT é‡Œé¢ç»´æŠ¤çš„ç€è‰²å™¨è®°å½•é¡¹ï¼Œç”¨æ¥å’Œåœºæ™¯ä¸­çš„æè´¨å®ä¾‹åšæ˜ å°„ç»‘å®šçš„ã€‚
+// ç”±äº Record å¯¹äºå­—èŠ‚å¯¹é½è¦æ±‚å¾ˆé«˜ï¼Œæ‰€ä»¥ç”¨åˆ°äº† __align__ å…³é”®å­—ï¼›
+// æ¯ä¸ª Record éƒ½æœ‰ä¸€ä¸ª header è¡¨ç¤ºè¯¥ç€è‰²å™¨å®ä¾‹çš„å¥æŸ„ã€‚
+// ç”±äºä¸€ä¸ªåœºæ™¯ä¸­åªéœ€è¦ä¸€ä¸ª RaygenRecord å’Œä¸€ä¸ª MissRecordï¼Œ
+// æ‰€ä»¥ä»–ä»¬å†…éƒ¨ç›´æ¥å£°æ˜åœºæ™¯æ•°æ®å³å¯ï¼Œå³ void* dataï¼›è€Œ HitRecord å¯èƒ½ä¼šæœ‰è‹¥å¹²ä¸ªï¼Œ
+// åˆ†åˆ«å¯¹åº”ä¸åŒçš„ç‰©ä½“æˆ–æè´¨ï¼Œæ‰€ä»¥ä»–ä»¬å†…éƒ¨éœ€è¦å£°æ˜ä¸€ä¸ª int objectIDï¼Œ
+// è¡¨ç¤ºå½“å‰çš„ HitRecord ç»‘å®šçš„æ˜¯å‡ å·ç‰©ä½“/æè´¨ã€‚
 struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) RaygenRecord {
     __align__(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
     // just a dummy value - later examples will use more interesting
@@ -43,13 +43,6 @@ Renderer::Renderer(const Scene* scene) : scene(scene) {
     lightsBuffer.alloc_and_upload(this->scene->lights);
     launchParams.lights.lightsBuffer = (Light*)lightsBuffer.d_pointer();
     launchParams.lights.lightSize = this->scene->lights.size();
-
-//     if (scene->envMap != NULL) {
-//         Texture* envMap = scene->envMap;
-//         AliasTable2D table = ComputeInfiniteAliasTable((float*)(envMap)->pixel, envMap->resolution.x, envMap->resolution.y, envMap->comp);
-//         CUDABuffer rowAlia, rowProb, colAlia, colProb;
-// 
-//     }
 
     std::cout << "creating optix context ..." << std::endl;
     CreateContext();
@@ -95,7 +88,20 @@ void Renderer::CreateTextures() {
         Texture* texture = NULL;
         if (scene->envMap != NULL && textureID == numTextures - 1) {
             texture = scene->envMap;
-            launchParams.environemnt.envTextureID = textureID;
+            launchParams.environment.envTextureID = textureID;
+
+            int nx = texture->resolution.x;
+            int ny = texture->resolution.y;
+            int nn = texture->comp;
+            nx /= nn;
+            ny /= nn;
+            AliasTable table = ComputeInfiniteAliasTable(texture->pixel, nx, ny, nn);
+
+            launchParams.environment.height = ny;
+            launchParams.environment.width = nx;
+            launchParams.environment.sumPower = table.sumPower;
+            launchParams.environment.length = table.length;
+            launchParams.environment.devBinomDistribs = table.devBinomDistribs;
         }
         else {
             texture = scene->textures[textureID];
@@ -144,17 +150,17 @@ void Renderer::CreateTextures() {
     }
 
     if (scene->envMap != NULL) {
-        launchParams.environemnt.envMap = textureObjects[numTextures - 1];
+        launchParams.environment.envMap = textureObjects[numTextures - 1];
     }
 }
 
 OptixTraversableHandle Renderer::BuildAccel() {
     /*
-    Ò»¸ö TriangleMesh ¾ÍÖ»ÄÜ×¢²á³ÉÒ»¸öÎïÌå id£¬
-    Ò»¸öÎïÌå id ¾ÍÖ»ÄÜ°ó¶¨Ò»¸ö Shader Record¡£
-    Ö»ÓĞÒ»¸ö Shader Record ÒâÎ¶×Å´ó¼Ò¶¼Ê¹ÓÃÏàÍ¬µÄ shader ÊµÀıºÍ´«Èë²ÎÊı£¬
-    ÄÇÃ´´ó¼Ò¶¼Ö»ÄÜÓÃÏàÍ¬²ÄÖÊÁË¡£
-    Òò´Ë£¬ÎÒÃÇ±ØĞë½«²»Í¬²ÄÖÊµÄÎïÌå·ÖÀëÎª¶à¸öÄ£ĞÍ¡£
+    ä¸€ä¸ª TriangleMesh å°±åªèƒ½æ³¨å†Œæˆä¸€ä¸ªç‰©ä½“ idï¼Œ
+    ä¸€ä¸ªç‰©ä½“ id å°±åªèƒ½ç»‘å®šä¸€ä¸ª Shader Recordã€‚
+    åªæœ‰ä¸€ä¸ª Shader Record æ„å‘³ç€å¤§å®¶éƒ½ä½¿ç”¨ç›¸åŒçš„ shader å®ä¾‹å’Œä¼ å…¥å‚æ•°ï¼Œ
+    é‚£ä¹ˆå¤§å®¶éƒ½åªèƒ½ç”¨ç›¸åŒæè´¨äº†ã€‚
+    å› æ­¤ï¼Œæˆ‘ä»¬å¿…é¡»å°†ä¸åŒæè´¨çš„ç‰©ä½“åˆ†ç¦»ä¸ºå¤šä¸ªæ¨¡å‹ã€‚
     */
     const int numMeshes = (int)scene->meshes.size();
     vertexBuffer.resize(numMeshes);
@@ -351,13 +357,13 @@ void Renderer::CreateModule() {
     pipelineCompileOptions.numPayloadValues = 2;
     pipelineCompileOptions.numAttributeValues = 2;
     pipelineCompileOptions.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
-    // .cuÎÄ¼şÀï¶¨ÒåµÄ¡°optixLaunchParams¡±»á±»ÖÃÎª¹â×·µÄ×îÖÕÊä³ö¡£
+    // .cuæ–‡ä»¶é‡Œå®šä¹‰çš„â€œoptixLaunchParamsâ€ä¼šè¢«ç½®ä¸ºå…‰è¿½çš„æœ€ç»ˆè¾“å‡ºã€‚
     pipelineCompileOptions.pipelineLaunchParamsVariableName = "optixLaunchParams";
 
     pipelineLinkOptions.maxTraceDepth = 2;
 
-    // embedded_ptx_code£¨¼´Ç°ÃæÎÒÃÇ±àÒë³öÀ´µÄ×ÅÉ«Æ÷»úÆ÷Âë£©±»°ó¶¨ÔÚÁËModuleÉíÉÏ¡£
-    // ÎÒÃÇµÄ×ÅÉ«Æ÷»úÆ÷ÂëÒÔ Module ÎªÃ½½é£¬³É¹¦ºÍ¹ÜÏßÈ¡µÃÁË°ó¶¨¡£
+    // embedded_ptx_codeï¼ˆå³å‰é¢æˆ‘ä»¬ç¼–è¯‘å‡ºæ¥çš„ç€è‰²å™¨æœºå™¨ç ï¼‰è¢«ç»‘å®šåœ¨äº†Moduleèº«ä¸Šã€‚
+    // æˆ‘ä»¬çš„ç€è‰²å™¨æœºå™¨ç ä»¥ Module ä¸ºåª’ä»‹ï¼ŒæˆåŠŸå’Œç®¡çº¿å–å¾—äº†ç»‘å®šã€‚
     const std::string ptxCode = embedded_ptx_code;
     char log[2048];
     size_t sizeof_log = sizeof(log);
@@ -374,9 +380,9 @@ void Renderer::CreateModule() {
     }
 }
 
-// ´´½¨¹ÜÏßÖĞµÄ×ÅÉ«Æ÷ÊµÀı¡£ÒªÉùÃ÷¸÷Àà×ÅÉ«Æ÷·Ö±ğÓĞ¼¸¸ö£¬
-// ¶ÔÓ¦µÄÊÇÄÄ¸ö module£¬¸÷¸ö×ÅÉ«Æ÷ÔÚ module ÖĞ×ÅÉ«Æ÷»úÆ÷ÂëµÄÈë¿Úº¯ÊıÊÇÊ²Ã´£¬
-// ×îºó¿¿ optixProgramGroupCreate º¯ÊıÀ´µÃµ½Ò»¸ö¶¨ÒåÍêÈ«µÄ×ÅÉ«Æ÷ÊµÀı¡£
+// åˆ›å»ºç®¡çº¿ä¸­çš„ç€è‰²å™¨å®ä¾‹ã€‚è¦å£°æ˜å„ç±»ç€è‰²å™¨åˆ†åˆ«æœ‰å‡ ä¸ªï¼Œ
+// å¯¹åº”çš„æ˜¯å“ªä¸ª moduleï¼Œå„ä¸ªç€è‰²å™¨åœ¨ module ä¸­ç€è‰²å™¨æœºå™¨ç çš„å…¥å£å‡½æ•°æ˜¯ä»€ä¹ˆï¼Œ
+// æœ€åé  optixProgramGroupCreate å‡½æ•°æ¥å¾—åˆ°ä¸€ä¸ªå®šä¹‰å®Œå…¨çš„ç€è‰²å™¨å®ä¾‹ã€‚
 void Renderer::CreateRaygenPrograms() {
     // we do a single ray gen program in this example:
     raygenPGs.resize(1);
@@ -547,7 +553,7 @@ void Renderer::CreatePipeline() {
 
 /*! constructs the shader binding table */
 void Renderer::BuildSBT() {
-    // ´´½¨ Kulla-Conty LUT
+    // åˆ›å»º Kulla-Conty LUT
     std::vector<float> bsdf_avg(kLutResolution * kLutResolution),
         bsdf_albedo_avg(kLutResolution);
     ComputeKullaConty(bsdf_avg.data(), bsdf_albedo_avg.data());

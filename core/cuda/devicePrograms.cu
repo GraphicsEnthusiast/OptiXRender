@@ -62,8 +62,6 @@ static __forceinline__ __device__ T* GetPRD() {
 //------------------------------------------------------------------------------
 
 extern "C" __global__ void __closesthit__shadow() {
-    PRD& prd = *GetPRD<PRD>();
-    prd.lightVisible = false;
 }
 
 extern "C" __global__ void __closesthit__radiance() {
@@ -229,6 +227,9 @@ extern "C" __global__ void __raygen__renderFrame() {
             if (lightTrace(ray, light_radiance, light_pdf, closest_distance)) {
                 float misWeight = 1.0f;
                 if (bounce != 0) {
+                    if (!IsValid(light_pdf)) {
+                        break;
+                    }
                     misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
                 }
                 radiance += misWeight * history * light_radiance;
@@ -240,26 +241,49 @@ extern "C" __global__ void __raygen__renderFrame() {
             // 没有击中任何物体，积累背景色
             bool notHit = prd.isect.distance == FLT_MAX;
             if (notHit) {
-                //vec3f unit_direction = normalize(- V);
-                //float t = 0.5f * (unit_direction.y + 1.0f);
-                //vec3f backColor = (1.0f - t) * vec3f(1.0f) + t * vec3f(0.5f, 0.7f, 1.0f);
-                //backColor = 0.0f;
-
-                //float misWeight = 1.0f;
-                //if(bounce != 0) {
-                //   misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
-                //}
-                //radiance += misWeight * backColor * history;
-                if (optixLaunchParams.environemnt.envTextureID != -1 && bounce == 0) {
+                if (optixLaunchParams.environment.envTextureID != -1) {
                     vec2f uv = SphereToPlane(ray.direction);
-                    vec4f fromTexture = tex2D<float4>(optixLaunchParams.environemnt.envMap, uv.x, uv.y);
-                    radiance += (vec3f)fromTexture;
+                    vec4f fromTexture = tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
+                    light_radiance = (vec3f)fromTexture;
+
+                    float misWeight = 1.0f;
+                    if (bounce != 0) {
+                        //int length = optixLaunchParams.environment.length;
+                        //int width = optixLaunchParams.environment.width;
+                        //int height = optixLaunchParams.environment.height;
+                        //float sumPower = optixLaunchParams.environment.sumPower;
+                        //light_pdf = PdfInfinite(width, height, ray.direction, light_radiance, sumPower);
+                        //
+                        //if (!IsValid(light_pdf)) {
+                        //    break;
+                        //}
+                        //
+                        //misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
+                    }
+
+                    radiance += misWeight * history * light_radiance;
                 }
 
                 break;
             }
 
+            //if (optixLaunchParams.environment.envTextureID != -1) {
+            //    int length = optixLaunchParams.environment.length;
+            //    int width = optixLaunchParams.environment.width;
+            //    int height = optixLaunchParams.environment.height;
+            //    float sumPower = optixLaunchParams.environment.sumPower;
+            //    auto buffer = optixLaunchParams.environment.devBinomDistribs;
+            //    Ray shadowRay;
+            //    shadowRay.origin = prd.isect.position;
+            //
+            //    vec2f uv = SampleInfinite(length, width, height, buffer, vec2f(prd.random(), prd.random()), shadowRay.direction);
+            //    vec4f fromTexture = tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
+            //    light_radiance = (vec3f)fromTexture;
+            //    light_pdf = PdfInfinite(width, height, shadowRay.direction, light_radiance, sumPower);
+            //}
+
             if (lights.lightSize != 0) {
+                prd.lightVisible = false;
                 // uniform sample one light
                 int index = clamp(int(lights.lightSize * prd.random()), 0, lights.lightSize - 1);
                 const Light& light = lights.lightsBuffer[index];
@@ -295,7 +319,6 @@ extern "C" __global__ void __raygen__renderFrame() {
                     float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
 
                     radiance += misWeight * light_radiance * bsdf * costheta * history / light_pdf;
-
                 }
             }
 
