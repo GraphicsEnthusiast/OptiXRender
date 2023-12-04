@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Utils.h"
-#include "CUDABuffer.h"
-#include <vector>
 
 __forceinline__ __device__ float PowerHeuristic(float pdf1, float pdf2, int beta) {
 	float p1 = pow(pdf1, beta);
@@ -13,11 +11,10 @@ __forceinline__ __device__ float PowerHeuristic(float pdf1, float pdf2, int beta
 
 __forceinline__ __device__ vec3f PlaneToSphere(const vec2f& uv) {
 	vec2f xy = uv;
-	xy.y = 1.0f - xy.y; //flip y
 
 	//获取角度
-	float phi = M_2PIf * (xy.x - 0.5f);    //[-pi ~ pi]
-	float theta = M_PIf * (xy.y - 0.5f);        //[-pi/2 ~ pi/2]   
+	float phi = M_2PIf * (xy.x - 0.5f);    // [-pi ~ pi]
+	float theta = M_PIf * (xy.y - 0.5f);   // [-pi/2 ~ pi/2]   
 
 	//球坐标计算方向
 	vec3f L = normalize(vec3f(cos(theta) * cos(phi), sin(theta), cos(theta) * sin(phi)));

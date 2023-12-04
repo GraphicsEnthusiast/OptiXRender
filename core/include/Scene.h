@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gdt/math/AffineSpace.h"
+#include "CUDABuffer.h"
 #include <vector>
 #include <cuda_runtime.h>
 
@@ -75,7 +76,8 @@ struct TriangleMesh {
 //*************************************light*************************************
 enum LightType {
     Quad,
-    Sphere
+    Sphere,
+    Environment
 };
 
 struct Light {
@@ -88,6 +90,10 @@ struct Light {
     vec3f v{ 6.0f, 0.0f, 0.0f };
 
     float radius = 3.0f;
+
+    int width, height, comp;
+    float* cache;
+    float* envMap;
 };
 //*************************************light*************************************
 
@@ -107,6 +113,21 @@ struct Texture {
     vec2i resolution{ -1 };
     int comp{ 4 };
 };
+
+struct HdrTexture {
+    HdrTexture(const std::string& fileName);
+    ~HdrTexture();
+
+	// 计算 hdr 贴图相关缓存信息
+    void CalculateHdrCache();
+    void CreateCudaTexture();
+
+    float* cache{ nullptr };
+    float* hdr{ nullptr };
+    int width, height, comp;
+
+    cudaTextureObject_t cuda_texture_hdr, cuda_texture_cache;
+};
 //*************************************texture*************************************
 
 //*************************************scene*************************************
@@ -118,11 +139,13 @@ public:
     void AddMesh(const std::string& objFile, Material& material, const TextureName& textureName);
     void AddTexture(const std::string& fileName);
     void AddLight(const Light& l);
+    void AddEnv(const std::string& fileName);
 
 public:
     std::vector<TriangleMesh*> meshes;
     std::vector<Texture*> textures;
     std::vector<Light> lights;
+    HdrTexture* env = NULL;
     //! bounding box of all vertices in the scene
     box3f bounds;
 };

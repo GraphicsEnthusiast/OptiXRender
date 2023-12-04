@@ -149,7 +149,7 @@ __forceinline__ __device__ vec3f EvaluateLight(const Light& light, const Ray& ra
 	else if (light.type == LightType::Sphere) {
 		return EvaluateSphere(light, ray, distance, pdf, light_distance);
 	}
-
+	
 	return 0.0f;
 }
 

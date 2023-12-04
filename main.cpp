@@ -150,6 +150,7 @@ namespace osc {
 				material,
 				textureName
 			);
+            scene.AddEnv("../../models/spaichingen_hill_4k.hdr");
             Camera camera = { /*from*/vec3f(0.2f, 0.2f, 0.2f),
                 /* at */scene.bounds.center(),
                 /* up */vec3f(0.f,1.f,0.f) };
@@ -161,7 +162,9 @@ namespace osc {
             light.position = vec3f(0.5f, 0.25f, 0.0f);
             light.radius = 0.1f;
             light.radiance = vec3f(15.0f);
-            scene.AddLight(light);
+            //scene.AddLight(light);
+
+            //scene.AddLight(light);
             SampleWindow* window = new SampleWindow("RTRT_Render",
                 &scene, camera, worldScale);
             //      window->enableFlyMode();

@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "Light.h"
 #include "Material.h"
+#include "Environment.h"
 
 #define NUM_LIGHT_SAMPLES 4
 
@@ -160,7 +161,7 @@ extern "C" __global__ void __raygen__renderFrame() {
         bool hitLight = false;
         for (int i = 0; i < lights.lightSize; i++) {
             const Light& light = lights.lightsBuffer[i];
-            float light_distance = FLT_MAX;
+            float light_distance = 0.0f;
             vec3f Li = EvaluateLight(light, ray, closest_distance, light_pdf, light_distance);
 
             // 没有击中光源，pdf = 0.0f
@@ -238,12 +239,75 @@ extern "C" __global__ void __raygen__renderFrame() {
 
                 break;
             }
-            //*************************场景中的物体以及灯光求交*************************
 
-            // 没有击中任何物体，积累背景色
             bool notHit = prd.isect.distance == FLT_MAX;
             if (notHit) {
+                if (optixLaunchParams.environment.hasEnv) {
+                    int width = optixLaunchParams.environment.width;
+                    int height = optixLaunchParams.environment.height;
+                    vec2f uv = EvaluateEnvironment(width, height, light_pdf, ray.direction);
+                    light_radiance = (vec3f)tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
+                    light_pdf *= tex2D<float4>(optixLaunchParams.environment.envCache, uv.x, uv.y).z;
+
+                    float misWeight = 1.0f;
+                    if (bounce != 0) {
+                        if (!IsValid(light_pdf)) {
+                            break;
+                        }
+
+                        misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
+                    }
+
+                    radiance += misWeight * history * light_radiance;
+                }
                 break;
+            }
+            //*************************场景中的物体以及灯光求交*************************
+
+            if (optixLaunchParams.environment.hasEnv) {
+                prd.lightVisible = false;
+                
+                int width = optixLaunchParams.environment.width;
+                int height = optixLaunchParams.environment.height;
+                vec4f uv_t = tex2D<float4>(optixLaunchParams.environment.envCache, prd.random(), prd.random());
+                vec2f uv(uv_t.x, uv_t.y);
+
+                Ray shadowRay;
+                shadowRay.origin = prd.isect.position;
+                SampleEnvironment(width, height, light_pdf, shadowRay.direction, uv);
+                light_pdf *= tex2D<float4>(optixLaunchParams.environment.envCache, uv.x, uv.y).z;
+                light_radiance = (vec3f)tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
+                optixTrace(optixLaunchParams.traversable,
+                    shadowRay.origin,
+                    shadowRay.direction,
+                    EPS,      // tmin
+                    FLT_MAX,  // tmax
+                    0.0f,     // rayTime
+                    OptixVisibilityMask(255),
+                    // For shadow rays: skip any/closest hit shaders and terminate on first
+                    // intersection with anything. The miss shader is used to mark if the
+                    // light was visible.
+                    OPTIX_RAY_FLAG_DISABLE_ANYHIT
+                    | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
+                    | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
+                    SHADOW_RAY_TYPE,            // SBT offset
+                    RAY_TYPE_COUNT,             // SBT stride
+                    SHADOW_RAY_TYPE,            // missSBTIndex 
+                    u0, u1);
+
+                vec3f tv; float t;
+                if (!lightTrace(shadowRay, tv, t, FLT_MAX) && prd.lightVisible) {
+                    bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
+                    float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
+
+                    if (!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(light_pdf) || !IsValid(costheta)) {
+                        break;
+                    }
+
+                    float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
+
+                    radiance += misWeight * light_radiance * bsdf * costheta * history / light_pdf;
+                }
             }
 
             if (lights.lightSize != 0) {
@@ -252,6 +316,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                 int index = clamp(int(lights.lightSize * prd.random()), 0, lights.lightSize - 1);
                 const Light& light = lights.lightsBuffer[index];
                 float light_distance = 0.0f;
+
                 Ray shadowRay;
                 shadowRay.origin = prd.isect.position;
                 light_radiance = SampleLight(light, shadowRay.origin, vec2f(prd.random(), prd.random()), shadowRay.direction, light_distance, light_pdf);
@@ -295,7 +360,7 @@ extern "C" __global__ void __raygen__renderFrame() {
             if (!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
                 break;
             }
-            
+
             history *= bsdf * costheta / bsdf_pdf;
 
             // 俄罗斯轮盘赌

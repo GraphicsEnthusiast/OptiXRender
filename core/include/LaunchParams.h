@@ -44,8 +44,14 @@ struct LaunchParams {
 
 	struct {
 		int lightSize = 0;
-		Light* lightsBuffer;
+		Light* lightsBuffer = nullptr;
 	} lights;
+
+	struct {
+		bool hasEnv = false;
+		cudaTextureObject_t envMap, envCache;
+		int width, height;
+	} environment;
 
 	OptixTraversableHandle traversable;
 };

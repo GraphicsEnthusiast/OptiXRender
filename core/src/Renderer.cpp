@@ -39,10 +39,12 @@ struct __align__(OPTIX_SBT_RECORD_ALIGNMENT) HitgroupRecord {
 Renderer::Renderer(const Scene* scene) : scene(scene) {
     InitOptix();
 
-    CUDABuffer lightsBuffer;
-    lightsBuffer.alloc_and_upload(this->scene->lights);
-    launchParams.lights.lightsBuffer = (Light*)lightsBuffer.d_pointer();
-    launchParams.lights.lightSize = this->scene->lights.size();
+    if (this->scene->lights.size() != 0) {
+        CUDABuffer lightsBuffer;
+		lightsBuffer.alloc_and_upload(this->scene->lights);
+		launchParams.lights.lightsBuffer = (Light*)lightsBuffer.d_pointer();
+		launchParams.lights.lightSize = this->scene->lights.size();
+    }
 
     std::cout << "creating optix context ..." << std::endl;
     CreateContext();
@@ -66,6 +68,14 @@ Renderer::Renderer(const Scene* scene) : scene(scene) {
 
     std::cout << "building SBT ..." << std::endl;
     BuildSBT();
+
+    if (scene->env) {
+        launchParams.environment.hasEnv = true;
+        launchParams.environment.height = scene->env->height;
+        launchParams.environment.width = scene->env->width;
+        launchParams.environment.envMap = scene->env->cuda_texture_hdr;
+        launchParams.environment.envCache = scene->env->cuda_texture_cache;
+    }
 
     launchParamsBuffer.alloc(sizeof(launchParams));
     std::cout << "context, module, pipeline, etc, all set up ..." << std::endl;
