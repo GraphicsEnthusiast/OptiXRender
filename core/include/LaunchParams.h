@@ -6,12 +6,6 @@
 
 using namespace gdt;
 
-// alias method data
-struct BinomialDistrib {
-	float prob;
-	int failId;
-};
-
 // for this simple example, we have a single ray type
 enum {
 	RADIANCE_RAY_TYPE = 0,
