@@ -19,24 +19,24 @@ Scene::~Scene() {
 	}
 }
 
-void Scene::AddMesh(const std::string& objFile, Material& material, const TextureName& textureName) {
+void Scene::AddMesh(const std::string& objFile, Material& material, const TextureFile& textureFile) {
 	TriangleMesh* mesh = new TriangleMesh();
 
-	if (textureName.albedoFile != "") {
+	if (textureFile.albedoFile != "") {
 		material.albedoTextureID = this->textures.size();
-		AddTexture(textureName.albedoFile);
+		AddTexture(textureFile.albedoFile);
 	}
-	if (textureName.anisotropyFile != "") {
+	if (textureFile.anisotropyFile != "") {
 		material.anisotropyTextureID = this->textures.size();
-		AddTexture(textureName.anisotropyFile);
+		AddTexture(textureFile.anisotropyFile);
 	}
-	if (textureName.roughnessFile != "") {
+	if (textureFile.roughnessFile != "") {
 		material.roughnessTextureID = this->textures.size();
-		AddTexture(textureName.roughnessFile);
+		AddTexture(textureFile.roughnessFile);
 	}
-	if (textureName.specularFile != "") {
+	if (textureFile.specularFile != "") {
 		material.specularTextureID = this->textures.size();
-		AddTexture(textureName.specularFile);
+		AddTexture(textureFile.specularFile);
 	}
 
 	mesh->LoadMesh(objFile, material);

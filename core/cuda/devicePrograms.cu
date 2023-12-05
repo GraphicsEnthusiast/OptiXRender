@@ -312,7 +312,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                     bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
                     float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
 
-                    if (!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(light_pdf) || !IsValid(costheta)) {
+                    if (!IsValid(bsdf_pdf) || !IsValid(light_pdf) || !IsValid(costheta)) {
                         break;
                     }
 
@@ -355,7 +355,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                     bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
                     float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
 
-                    if (!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(light_pdf) || !IsValid(costheta)) {
+                    if (!IsValid(bsdf_pdf) || !IsValid(light_pdf) || !IsValid(costheta)) {
                         break;
                     }
 
@@ -369,7 +369,7 @@ extern "C" __global__ void __raygen__renderFrame() {
             bsdf = SampleMaterial(prd.isect, prd.random, V, L, bsdf_pdf);
             float costheta = abs(dot(prd.isect.shadeNormal, L));
 
-            if (!IsValid(bsdf_pdf) || !IsValid(bsdf.x) || !IsValid(bsdf.y) || !IsValid(bsdf.z) || !IsValid(costheta)) {
+            if (!IsValid(bsdf_pdf) || !IsValid(costheta)) {
                 break;
             }
 
@@ -381,6 +381,10 @@ extern "C" __global__ void __raygen__renderFrame() {
                 break;
             }
             history /= prr;
+            
+            if (IsNan(history)) {
+                break;
+            }
 
             // 更新光线信息
             V = -L;

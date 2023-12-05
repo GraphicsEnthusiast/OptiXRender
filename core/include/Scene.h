@@ -98,7 +98,7 @@ struct Light {
 //*************************************light*************************************
 
 //*************************************texture*************************************
-struct TextureName {
+struct TextureFile {
 	std::string albedoFile = "";
 	std::string roughnessFile = "";
 	std::string anisotropyFile = "";
@@ -118,7 +118,6 @@ struct HdrTexture {
     HdrTexture(const std::string& fileName);
     ~HdrTexture();
 
-	// ���� hdr ��ͼ��ػ�����Ϣ
     void CalculateHdrCache();
     void CreateCudaTexture();
 
@@ -136,7 +135,7 @@ public:
     Scene() = default;
     ~Scene();
 
-    void AddMesh(const std::string& objFile, Material& material, const TextureName& textureName);
+    void AddMesh(const std::string& objFile, Material& material, const TextureFile& textureFile);
     void AddTexture(const std::string& fileName);
     void AddLight(const Light& l);
     void AddEnv(const std::string& fileName);

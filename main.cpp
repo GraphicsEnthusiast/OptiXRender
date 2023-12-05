@@ -121,34 +121,34 @@ namespace osc {
       world, then exit */
     extern "C" int main(int ac, char** av)
     {
-        TextureName textureName;
+        TextureFile textureFile;
         Material material;
-        textureName.albedoFile = "../../models/01_Head_Base_Color.png";
+        textureFile.albedoFile = "../../models/01_Head_Base_Color.png";
         try {
             Scene scene;
             scene.AddMesh(
                 "../../models/head.obj",
                 material,
-                textureName
+                textureFile
             );
-            textureName.albedoFile = "../../models/02_Body_Base_Color.png";
+            textureFile.albedoFile = "../../models/02_Body_Base_Color.png";
 			scene.AddMesh(
 				"../../models/body.obj",
 				material,
-				textureName
+				textureFile
 			);
-            textureName.albedoFile = "../../models/03_Base_Base_Color.png";
+            textureFile.albedoFile = "../../models/03_Base_Base_Color.png";
 			scene.AddMesh(
 				"../../models/base.obj",
 				material,
-				textureName
+				textureFile
 			);
             material.type = MaterialType::Diffuse;
-            textureName.albedoFile = "../../models/grid.jpg";
+            textureFile.albedoFile = "../../models/grid.jpg";
 			scene.AddMesh(
 				"../../models/plane.obj",
 				material,
-				textureName
+				textureFile
 			);
             scene.AddEnv("../../models/spaichingen_hill_4k.hdr");
             Camera camera = { /*from*/vec3f(0.2f, 0.2f, 0.2f),

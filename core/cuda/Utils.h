@@ -52,8 +52,13 @@ __forceinline__ __device__ __host__ float Luminance(const vec3f& c) {
 	return dot(vec3f(0.299f, 0.587f, 0.114f), c);
 }
 
+
+__forceinline__ __device__ bool IsNan(const vec3f& v) {
+	return isnan(v.x) || isnan(v.y) || isnan(v.z);
+}
+
 __forceinline__ __device__ bool IsValid(float value) {
-	if (isnan(value) || value < EPS) {
+	if (isnan(value) || value < 0.0f) {
 		return false;
 	}
 
