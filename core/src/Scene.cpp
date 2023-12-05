@@ -38,6 +38,10 @@ void Scene::AddMesh(const std::string& objFile, Material& material, const Textur
 		material.specularTextureID = this->textures.size();
 		AddTexture(textureFile.specularFile);
 	}
+	if (textureFile.normalFile != "") {
+		material.normalTextureID = this->textures.size();
+		AddTexture(textureFile.normalFile);
+	}
 
 	mesh->LoadMesh(objFile, material);
 	this->meshes.emplace_back(mesh);
@@ -195,7 +199,7 @@ HdrTexture::~HdrTexture() {
 void HdrTexture::CalculateHdrCache() {
 	float lumSum = 0.0f;
 
-	//³õÊ¼»¯hÐÐwÁÐµÄ¸ÅÂÊÃÜ¶Èpdf²¢Í³¼Æ×ÜÁÁ¶È
+	//ï¿½ï¿½Ê¼ï¿½ï¿½hï¿½ï¿½wï¿½ÐµÄ¸ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½pdfï¿½ï¿½Í³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	std::vector<std::vector<float>> pdf(height);
 	for (auto& line : pdf) line.resize(width);
 	for (int i = 0; i < height; i++) {
@@ -209,14 +213,14 @@ void HdrTexture::CalculateHdrCache() {
 		}
 	}
 
-	//¸ÅÂÊÃÜ¶È¹éÒ»»¯
+	//ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶È¹ï¿½Ò»ï¿½ï¿½
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
 			pdf[i][j] /= lumSum;
 		}
 	}
 
-	//ÀÛ¼ÓÃ¿Ò»ÁÐµÃµ½xµÄ±ßÔµ¸ÅÂÊÃÜ¶È
+	//ï¿½Û¼ï¿½Ã¿Ò»ï¿½ÐµÃµï¿½xï¿½Ä±ï¿½Ôµï¿½ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½
 	std::vector<float> pdf_x_margin;
 	pdf_x_margin.resize(width);
 	for (int j = 0; j < width; j++) {
@@ -225,13 +229,13 @@ void HdrTexture::CalculateHdrCache() {
 		}
 	}
 
-	//¼ÆËãxµÄ±ßÔµ·Ö²¼º¯Êý
+	//ï¿½ï¿½ï¿½ï¿½xï¿½Ä±ï¿½Ôµï¿½Ö²ï¿½ï¿½ï¿½ï¿½ï¿½
 	std::vector<float> cdf_x_margin = pdf_x_margin;
 	for (int i = 1; i < width; i++) {
 		cdf_x_margin[i] += cdf_x_margin[i - 1];
 	}
 
-	//¼ÆËãyÔÚX=xÏÂµÄÌõ¼þ¸ÅÂÊÃÜ¶Èº¯Êý
+	//ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½X=xï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¶Èºï¿½ï¿½ï¿½
 	std::vector<std::vector<float>> pdf_y_condiciton = pdf;
 	for (int j = 0; j < width; j++) {
 		for (int i = 0; i < height; i++) {
@@ -239,7 +243,7 @@ void HdrTexture::CalculateHdrCache() {
 		}
 	}
 
-	//¼ÆËãyÔÚX=xÏÂµÄÌõ¼þ¸ÅÂÊ·Ö²¼º¯Êý
+	//ï¿½ï¿½ï¿½ï¿½yï¿½ï¿½X=xï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·Ö²ï¿½ï¿½ï¿½ï¿½ï¿½
 	std::vector<std::vector<float>> cdf_y_condiciton = pdf_y_condiciton;
 	for (int j = 0; j < width; j++) {
 		for (int i = 1; i < height; i++) {
@@ -247,8 +251,8 @@ void HdrTexture::CalculateHdrCache() {
 		}
 	}
 
-	//cdf_y_condiciton×ªÖÃÎª°´ÁÐ´æ´¢
-	//cdf_y_condiciton[i]±íÊ¾yÔÚX=iÏÂµÄÌõ¼þ¸ÅÂÊ·Ö²¼º¯Êý
+	//cdf_y_condiciton×ªï¿½ï¿½Îªï¿½ï¿½ï¿½Ð´æ´¢
+	//cdf_y_condiciton[i]ï¿½ï¿½Ê¾yï¿½ï¿½X=iï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·Ö²ï¿½ï¿½ï¿½ï¿½ï¿½
 	std::vector<std::vector<float>> temp = cdf_y_condiciton;
 	cdf_y_condiciton = std::vector<std::vector<float>>(width);
 	for (auto& line : cdf_y_condiciton) {
@@ -260,10 +264,10 @@ void HdrTexture::CalculateHdrCache() {
 		}
 	}
 
-	//Çî¾Ù xi_1, xi_2 Ô¤¼ÆËãÑù±¾ xy
-	//sample_x[i][j] ±íÊ¾ xi_1=i/height, xi_2=j/width Ê± (x,y) ÖÐµÄ x
-	//sample_y[i][j] ±íÊ¾ xi_1=i/height, xi_2=j/width Ê± (x,y) ÖÐµÄ y
-	//sample_p[i][j] ±íÊ¾È¡ (i, j) µãÊ±µÄ¸ÅÂÊÃÜ¶È
+	//ï¿½ï¿½ï¿½ xi_1, xi_2 Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ xy
+	//sample_x[i][j] ï¿½ï¿½Ê¾ xi_1=i/height, xi_2=j/width Ê± (x,y) ï¿½Ðµï¿½ x
+	//sample_y[i][j] ï¿½ï¿½Ê¾ xi_1=i/height, xi_2=j/width Ê± (x,y) ï¿½Ðµï¿½ y
+	//sample_p[i][j] ï¿½ï¿½Ê¾È¡ (i, j) ï¿½ï¿½Ê±ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½
 	std::vector<std::vector<float>> sample_x(height);
 	for (auto& line : sample_x) {
 		line.resize(width);
@@ -281,20 +285,20 @@ void HdrTexture::CalculateHdrCache() {
 			float xi_1 = float(i) / height;
 			float xi_2 = float(j) / width;
 
-			//ÓÃxi_1ÔÚcdf_x_marginÖÐlower boundµÃµ½Ñù±¾x
+			//ï¿½ï¿½xi_1ï¿½ï¿½cdf_x_marginï¿½ï¿½lower boundï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½x
 			int x = std::lower_bound(cdf_x_margin.begin(), cdf_x_margin.end(), xi_1) - cdf_x_margin.begin();
-			//ÓÃxi_2ÔÚX=xµÄÇé¿öÏÂµÃµ½Ñù±¾y
+			//ï¿½ï¿½xi_2ï¿½ï¿½X=xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÂµÃµï¿½ï¿½ï¿½ï¿½ï¿½y
 			int y = std::lower_bound(cdf_y_condiciton[x].begin(), cdf_y_condiciton[x].end(), xi_2) - cdf_y_condiciton[x].begin();
 
-			//´æ´¢ÎÆÀí×ø±êxyºÍxyÎ»ÖÃ¶ÔÓ¦µÄ¸ÅÂÊÃÜ¶È
+			//ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½xyï¿½ï¿½xyÎ»ï¿½Ã¶ï¿½Ó¦ï¿½Ä¸ï¿½ï¿½ï¿½ï¿½Ü¶ï¿½
 			sample_x[i][j] = float(x) / width;
 			sample_y[i][j] = float(y) / height;
 			sample_p[i][j] = pdf[i][j];
 		}
 	}
 
-	//ÕûºÏ½á¹ûµ½ÎÆÀí
-	//R,G Í¨µÀ´æ´¢Ñù±¾(x,y)¶øBÍ¨µÀ´æ´¢pdf(i, j)
+	//ï¿½ï¿½ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	//R,G Í¨ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½(x,y)ï¿½ï¿½BÍ¨ï¿½ï¿½ï¿½æ´¢pdf(i, j)
 	cache = new float[width * height * comp];
 	//for (int i = 0; i < width * height * 3; i++) cache[i] = 0.0;
 

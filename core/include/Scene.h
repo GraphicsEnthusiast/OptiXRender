@@ -53,6 +53,9 @@ struct Material {
     int specularTextureID = -1;
     cudaTextureObject_t specular_texture;
 
+    int normalTextureID = -1;
+    cudaTextureObject_t normal_texture;
+
     float* bsdf_avg_buffer = NULL;
     float* albedo_avg_buffer = NULL;
 };
@@ -76,8 +79,7 @@ struct TriangleMesh {
 //*************************************light*************************************
 enum LightType {
     Quad,
-    Sphere,
-    Environment
+    Sphere
 };
 
 struct Light {
@@ -90,10 +92,6 @@ struct Light {
     vec3f v{ 6.0f, 0.0f, 0.0f };
 
     float radius = 3.0f;
-
-    int width, height;
-    float* cache;
-    float* envMap;
 };
 //*************************************light*************************************
 
@@ -103,6 +101,7 @@ struct TextureFile {
 	std::string roughnessFile = "";
 	std::string anisotropyFile = "";
 	std::string specularFile = "";
+    std::string normalFile = "";
 };
 
 struct Texture {

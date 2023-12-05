@@ -65,6 +65,17 @@ __forceinline__ __device__ bool IsValid(float value) {
 	return true;
 }
 
+__forceinline__ __device__ vec3f NormalFormTangentToWorld(const vec3f& n, vec3f tangentNormal) {
+	tangentNormal = normalize(tangentNormal * 2.0f - 1.0f);
+
+	//Orthonormal Basis
+	vec3f UpVector = abs(n.z) < 0.9f ? vec3f(0.0f, 0.0f, 1.0f) : vec3f(1.0f, 0.0f, 0.0f);
+	vec3f TangentX = normalize(cross(UpVector, n));
+	vec3f TangentY = normalize(cross(n, TangentX));
+
+	return normalize(TangentX * tangentNormal.x + TangentY * tangentNormal.y + n * tangentNormal.z);
+}
+
 // 将单位向量从世界坐标系转换到局部坐标系
 // dir 待转换的单位向量
 // up 局部坐标系的竖直向上方向在世界坐标系下的方向

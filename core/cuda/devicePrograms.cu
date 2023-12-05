@@ -98,6 +98,10 @@ extern "C" __global__ void __closesthit__radiance() {
     if (material.specularTextureID != -1) {
         material.specular = (vec3f)tex2D<float4>(material.specular_texture, tc.x, tc.y);
     }
+    if (material.normalTextureID != -1) {
+        vec3f t_normal = (vec3f)tex2D<float4>(material.normal_texture, tc.x, tc.y);
+        Ns = NormalFormTangentToWorld(Ns, t_normal);
+    }
 
     const vec3f surfPos = (1.0f - u - v) * sbtData.vertex[index.x]
         + u * sbtData.vertex[index.y]

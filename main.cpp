@@ -124,6 +124,7 @@ namespace osc {
         TextureFile textureFile;
         Material material;
         textureFile.albedoFile = "../../models/01_Head_Base_Color.png";
+        textureFile.normalFile = "../../models/01_Head_Normal_DirectX.png";
         try {
             Scene scene;
             scene.AddMesh(
@@ -132,19 +133,23 @@ namespace osc {
                 textureFile
             );
             textureFile.albedoFile = "../../models/02_Body_Base_Color.png";
+            textureFile.normalFile = "../../models/02_Body_Normal_DirectX.png";
 			scene.AddMesh(
 				"../../models/body.obj",
 				material,
 				textureFile
 			);
             textureFile.albedoFile = "../../models/03_Base_Base_Color.png";
+            textureFile.normalFile = "../../models/03_Base_Normal_DirectX.png";
 			scene.AddMesh(
 				"../../models/base.obj",
 				material,
 				textureFile
 			);
+            material = Material();
             material.type = MaterialType::Diffuse;
             textureFile.albedoFile = "../../models/grid.jpg";
+            textureFile.normalFile = "";
 			scene.AddMesh(
 				"../../models/plane.obj",
 				material,
@@ -164,7 +169,6 @@ namespace osc {
             light.radiance = vec3f(15.0f);
             //scene.AddLight(light);
 
-            //scene.AddLight(light);
             SampleWindow* window = new SampleWindow("RTRT_Render",
                 &scene, camera, worldScale);
             //      window->enableFlyMode();

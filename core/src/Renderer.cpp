@@ -595,6 +595,9 @@ void Renderer::BuildSBT() {
             if (rec.data.material.specularTextureID != -1) {
                 rec.data.material.specular_texture = textureObjects[rec.data.material.specularTextureID];
             }
+            if (rec.data.material.normalTextureID != -1) {
+                rec.data.material.normal_texture = textureObjects[rec.data.material.normalTextureID];
+            }
             rec.data.material.bsdf_avg_buffer = (float*)bsdf_avg_buffer.d_pointer();
             rec.data.material.albedo_avg_buffer = (float*)bsdf_albedo_avg_buffer.d_pointer();
             rec.data.index = (vec3i*)indexBuffer[meshID].d_pointer();
