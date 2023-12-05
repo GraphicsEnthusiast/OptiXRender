@@ -17,6 +17,9 @@ struct PRD {
     Random random;
     bool lightVisible;
     Interaction isect;
+    vec3f pixelAlbedo;
+    vec3f pixelNormal;
+    bool firstBounce;
 };
 
 /*
@@ -104,6 +107,11 @@ extern "C" __global__ void __closesthit__radiance() {
     prd.isect.distance = length(surfPos - prd.isect.position);
     prd.isect.position = surfPos;
     prd.isect.material = material;
+    if (prd.firstBounce) {
+        prd.pixelNormal = Ns;
+        prd.pixelAlbedo = material.albedo;
+        prd.firstBounce = false;
+    }
 }
 
 extern "C" __global__ void __anyhit__radiance() { /*! for this simple example, this will remain empty */
@@ -123,6 +131,11 @@ extern "C" __global__ void __anyhit__shadow() { /*! not going to be used */
 extern "C" __global__ void __miss__radiance() {
     PRD& prd = *GetPRD<PRD>();
     prd.isect.distance = FLT_MAX;
+    if (prd.firstBounce) {
+        prd.pixelAlbedo = 0.0f;
+        prd.pixelNormal = 0.0f;
+        prd.firstBounce = false;
+    }
 }
 
 extern "C" __global__ void __miss__shadow() {
@@ -206,6 +219,7 @@ extern "C" __global__ void __raygen__renderFrame() {
 
         prd.isect.distance = 0.0f;
         prd.isect.position = ray.origin;
+        prd.firstBounce = true;
 
         for (int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
             //*************************场景中的物体以及灯光求交*************************
@@ -375,6 +389,8 @@ extern "C" __global__ void __raygen__renderFrame() {
         }
 
         pixelColor += radiance;
+        pixelAlbedo += prd.pixelAlbedo;
+        pixelNormal += prd.pixelNormal;
     }
 
     vec4f rgba(pixelColor / numPixelSamples, 1.0f);
@@ -392,4 +408,3 @@ extern "C" __global__ void __raygen__renderFrame() {
     optixLaunchParams.frame.albedoBuffer[fbIndex] = (float4)albedo;
     optixLaunchParams.frame.normalBuffer[fbIndex] = (float4)normal;
 }
-
