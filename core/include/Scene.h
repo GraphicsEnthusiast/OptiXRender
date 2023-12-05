@@ -91,7 +91,7 @@ struct Light {
 
     float radius = 3.0f;
 
-    int width, height, comp;
+    int width, height;
     float* cache;
     float* envMap;
 };
@@ -118,7 +118,7 @@ struct HdrTexture {
     HdrTexture(const std::string& fileName);
     ~HdrTexture();
 
-	// ¼ÆËã hdr ÌùÍ¼Ïà¹Ø»º´æÐÅÏ¢
+	// ï¿½ï¿½ï¿½ï¿½ hdr ï¿½ï¿½Í¼ï¿½ï¿½Ø»ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
     void CalculateHdrCache();
     void CreateCudaTexture();
 
