@@ -65,7 +65,7 @@ __forceinline__ __device__ bool IsValid(float value) {
 	return true;
 }
 
-__forceinline__ __device__ vec3f NormalFormTangentToWorld(const vec3f& n, vec3f tangentNormal) {
+__forceinline__ __device__ vec3f NormalFromTangentToWorld(const vec3f& n, vec3f tangentNormal) {
 	tangentNormal = normalize(tangentNormal * 2.0f - 1.0f);
 
 	//Orthonormal Basis
