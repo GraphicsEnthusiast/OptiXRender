@@ -140,7 +140,7 @@ namespace osc {
             textureFile.normalFile = "../../models/02_Body_Normal_DirectX.png";
 
             Material m;
-            m.type = MaterialType::Dielectric;
+            m.type = MaterialType::ThinDielectric;
             m.roughness = 0.2f;
             TextureFile t;
 			scene.AddMesh(

@@ -25,6 +25,7 @@ enum MaterialType {
     Dielectric,
     Plastic,
     MetalWorkflow,
+    ThinDielectric,
 };
 
 struct Material {

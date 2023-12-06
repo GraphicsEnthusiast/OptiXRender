@@ -478,6 +478,120 @@ __forceinline__ __device__ vec3f SampleMetalWorkflow(const Interaction& isect, R
 }
 //*************************************metal workflow*************************************
 
+//*************************************thin dielectric*************************************
+__forceinline__ __device__ vec3f EvaluateThinDielectric(const Interaction& isect,
+	const vec3f& world_V, const vec3f& world_L, float& pdf) {
+	float eta = isect.material.int_ior / isect.material.ext_ior;
+	vec3f albedo = isect.material.albedo;
+	float roughness = isect.material.roughness;
+	float alpha = sqr(roughness);
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+	vec3f L = world_L;
+	vec3f H;
+
+	bool isReflect = dot(N, L) * dot(N, V) > 0.0f;
+	if (isReflect) {
+		H = normalize(V + L);
+	}
+	else {
+		vec3f Vr = ToWorld(ToLocal(V, -N), N);
+		H = normalize(Vr + L);
+		if (dot(N, H) < 0.0f) {
+			H = -H;
+		}
+	}
+
+	vec3f bsdf = 0.0f;
+	float Dv = DistributionVisibleGGX(V, H, N, alpha, alpha);
+	float F = FresnelDielectric(V, H, 1.0f / eta);
+	if (F < 1.0f) {
+        F *= 2.0f / (1.0f + F);
+    }
+	float D = DistributionGGX(H, N, alpha, alpha);
+	float dwh_dwi = abs(1.0f / (4.0f * dot(V, H)));
+	float NdotV = abs(dot(N, V));
+	float NdotL = abs(dot(N, L));
+	float G = GeometrySmith_1(V, H, N, alpha, alpha) * GeometrySmith_1(L, H, N, alpha, alpha);
+	if (isReflect) {
+		if (dot(N, L) <= 0.0f) {
+			return 0.0f;
+		}
+
+		pdf = F * Dv * dwh_dwi;
+
+		bsdf = albedo * F * D * G / (4.0f * NdotV * NdotL);
+	}
+	else {
+		if (dot(N, L) * dot(N, V) >= 0.0f) {
+			return 0.0f;
+		}
+
+		pdf = (1.0f - F) * Dv * dwh_dwi;
+
+		bsdf = albedo * (1.0f - F) * D * G / (4.0f * NdotV * NdotL);
+	}
+
+	return bsdf;
+}
+
+__forceinline__ __device__ vec3f SampleThinDielectric(const Interaction& isect, Random& random,
+	const vec3f& world_V, vec3f& world_L, float& pdf) {
+	float eta = isect.material.int_ior / isect.material.ext_ior;
+	vec3f albedo = isect.material.albedo;
+	float roughness = isect.material.roughness;
+	float alpha = sqr(roughness);
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+	vec3f H = SampleVisibleGGX(N, V, alpha, alpha, vec2f(random(), random()));
+	H = ToWorld(H, N);
+
+	vec3f bsdf = 0.0f;
+	float Dv = DistributionVisibleGGX(V, H, N, alpha, alpha);
+	float F = FresnelDielectric(V, H, 1.0f / eta);
+	if (F < 1.0f) {
+        F *= 2.0f / (1.0f + F);
+    }
+	float D = DistributionGGX(H, N, alpha, alpha);
+	if (random() < F) {
+		world_L = reflect(-V, H);
+		vec3f L = world_L;
+
+		if (dot(N, L) <= 0.0f) {
+			return 0.0f;
+		}
+
+		float dwh_dwi = abs(1.0f / (4.0f * dot(V, H)));
+		float NdotV = abs(dot(N, V));
+		float NdotL = abs(dot(N, L));
+		float G = GeometrySmith_1(V, H, N, alpha, alpha) * GeometrySmith_1(L, H, N, alpha, alpha);
+		pdf = F * Dv * dwh_dwi;
+
+		bsdf = albedo * F * D * G / (4.0f * NdotV * NdotL);
+	}
+	else {
+		world_L = -V;
+		vec3f L = world_L;
+
+		if (dot(N, L) * dot(N, V) >= 0.0f) {
+			return 0.0f;
+		}
+
+		float NdotV = abs(dot(N, V));
+		float NdotL = abs(dot(N, L));
+		float G = GeometrySmith_1(V, H, N, alpha, alpha) * GeometrySmith_1(L, H, N, alpha, alpha);
+		float dwh_dwi = abs(1.0f / (4.0f * dot(V, H)));
+		pdf = (1.0f - F) * Dv * dwh_dwi;
+
+		bsdf = albedo * (1.0f - F) * D * G / (4.0f * NdotV * NdotL);
+	}
+
+	return bsdf;
+}
+//*************************************thin dielectric*************************************
+
 //*************************************material*************************************
 __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	const vec3f& world_V, const vec3f& world_L, float& pdf) {
@@ -497,6 +611,9 @@ __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	}
 	else if (isect.material.type == MaterialType::MetalWorkflow) {
 		bsdf = EvaluateMetalWorkflow(isect, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::ThinDielectric) {
+		bsdf = EvaluateThinDielectric(isect, world_V, world_L, pdf);
 	}
 
 	return bsdf;
@@ -520,6 +637,9 @@ __forceinline__ __device__ vec3f SampleMaterial(const Interaction& isect, Random
 	}
 	else if (isect.material.type == MaterialType::MetalWorkflow) {
 		bsdf = SampleMetalWorkflow(isect, random, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::ThinDielectric) {
+		bsdf = SampleThinDielectric(isect, random, world_V, world_L, pdf);
 	}
 
 	return bsdf;
