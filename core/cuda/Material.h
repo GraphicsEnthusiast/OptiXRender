@@ -636,8 +636,8 @@ __forceinline__ __device__ vec3f SampleClearCoatedConductor(const Interaction& i
 	vec3f V = world_V;
 	vec3f H;
 
-    float F = FresnelDielectric(V, N, 1.0f / 1.5f) * 10.0f;
-	if(random() < F) {
+    float F = FresnelDielectric(V, N, 1.0f / 1.5f);
+	if(random() < F * 10.0f) {
 		H = SampleVisibleGGX(N, V, alpha_u, alpha_v, vec2f(random(), random()));
 	    H = ToWorld(H, N);
 	    world_L = reflect(-V, H);
