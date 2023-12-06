@@ -179,7 +179,7 @@ extern "C" __global__ void __raygen__renderFrame() {
             float light_distance = 0.0f;
             vec3f Li = EvaluateLight(light, ray, closest_distance, light_pdf, light_distance);
 
-            // 没有击中光源，pdf = 0.0f
+            // 没有击中光源，pdf = -1.0f
             if (!IsValid(light_pdf)) {
                 continue;
             }
