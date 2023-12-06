@@ -101,6 +101,12 @@ extern "C" __global__ void __closesthit__radiance() {
     if (material.metallicTextureID != -1) {
         material.metallic = tex2D<float4>(material.metallic_texture, tc.x, tc.y).x;
     }
+    if (material.coat_roughness_uTextureID != -1) {
+        material.coat_roughness_u = tex2D<float4>(material.coat_roughness_u_texture, tc.x, tc.y).x;
+    }
+    if (material.coat_roughness_vTextureID != -1) {
+        material.coat_roughness_v = tex2D<float4>(material.coat_roughness_v_texture, tc.x, tc.y).x;
+    }
     if (material.normalTextureID != -1) {
         vec3f t_normal = (vec3f)tex2D<float4>(material.normal_texture, tc.x, tc.y);
         Ns = NormalFromTangentToWorld(Ns, t_normal);

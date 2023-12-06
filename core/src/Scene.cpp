@@ -42,6 +42,14 @@ void Scene::AddMesh(const std::string& objFile, Material& material, const Textur
 		material.metallicTextureID = this->textures.size();
 		AddTexture(textureFile.metallicFile);
 	}
+	if (textureFile.coat_roughness_uFile != "") {
+		material.coat_roughness_uTextureID = this->textures.size();
+		AddTexture(textureFile.coat_roughness_uFile);
+	}
+	if (textureFile.coat_roughness_vFile != "") {
+		material.coat_roughness_vTextureID = this->textures.size();
+		AddTexture(textureFile.coat_roughness_vFile);
+	}
 	if (textureFile.normalFile != "") {
 		material.normalTextureID = this->textures.size();
 		AddTexture(textureFile.normalFile);

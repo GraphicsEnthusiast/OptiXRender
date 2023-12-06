@@ -598,6 +598,12 @@ void Renderer::BuildSBT() {
             if (rec.data.material.metallicTextureID != -1) {
                 rec.data.material.metallic_texture = textureObjects[rec.data.material.metallicTextureID];
             }
+            if (rec.data.material.coat_roughness_uTextureID != -1) {
+                rec.data.material.coat_roughness_u_texture = textureObjects[rec.data.material.coat_roughness_uTextureID];
+            }
+            if (rec.data.material.coat_roughness_vTextureID != -1) {
+                rec.data.material.coat_roughness_v_texture = textureObjects[rec.data.material.coat_roughness_vTextureID];
+            }
             if (rec.data.material.normalTextureID != -1) {
                 rec.data.material.normal_texture = textureObjects[rec.data.material.normalTextureID];
             }

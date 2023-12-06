@@ -26,6 +26,7 @@ enum MaterialType {
     Plastic,
     MetalWorkflow,
     ThinDielectric,
+    ClearCoatedConductor
 };
 
 struct Material {
@@ -58,6 +59,14 @@ struct Material {
     float metallic = 0.8f;
     int metallicTextureID = -1;
     cudaTextureObject_t metallic_texture;
+
+    float coat_roughness_u = 0.1f;
+    int coat_roughness_uTextureID = -1;
+    cudaTextureObject_t coat_roughness_u_texture;
+
+    float coat_roughness_v = 0.1f;
+    int coat_roughness_vTextureID = -1;
+    cudaTextureObject_t coat_roughness_v_texture;
 
     int normalTextureID = -1;
     cudaTextureObject_t normal_texture;
@@ -108,6 +117,8 @@ struct TextureFile {
 	std::string anisotropyFile = "";
 	std::string specularFile = "";
     std::string metallicFile = "";
+    std::string coat_roughness_uFile = "";
+    std::string coat_roughness_vFile = "";
     std::string normalFile = "";
 };
 

@@ -592,6 +592,106 @@ __forceinline__ __device__ vec3f SampleThinDielectric(const Interaction& isect, 
 }
 //*************************************thin dielectric*************************************
 
+//*************************************clearcoated conductor*************************************
+__forceinline__ __device__ vec3f EvaluateClearCoatedConductor(const Interaction& isect,
+	const vec3f& world_V, const vec3f& world_L, float& pdf) {
+	float alpha_u = sqr(isect.material.coat_roughness_u);
+	float alpha_v = sqr(isect.material.coat_roughness_v);
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+	vec3f L = world_L;
+	vec3f H = normalize(V + L);
+
+	float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
+
+	float NdotV = dot(N, V);
+	float NdotL = dot(N, L);
+
+	if (NdotV <= 0.0f || NdotL <= 0.0f) {
+		return 0.0f;
+	}
+
+	float F = FresnelDielectric(V, H, 1.0f / 1.5f);
+	float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
+	float D = DistributionGGX(H, N, alpha_u, alpha_v);
+
+    float cond_pdf = 0.0f;
+	float coat_pdf = Dv * abs(1.0f / (4.0f * dot(V, H)));
+	vec3f cond_brdf = EvaluateConductor(isect, world_V, world_L, cond_pdf);
+	vec3f coat_brdf = F * D * G / (4.0f * NdotV * NdotL);
+
+	vec3f brdf = F * coat_brdf + (1.0f - F) * cond_brdf;
+	pdf = F * coat_pdf + (1.0f - F) * cond_pdf;
+
+	return brdf;
+}
+
+__forceinline__ __device__ vec3f SampleClearCoatedConductor(const Interaction& isect, Random& random,
+	const vec3f& world_V, vec3f& world_L, float& pdf) {
+	float alpha_u = sqr(isect.material.coat_roughness_u);
+	float alpha_v = sqr(isect.material.coat_roughness_v);
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+	vec3f H;
+
+    float F = FresnelDielectric(V, N, 1.0f / 1.5f) * 10.0f;
+	if(random() < F) {
+		H = SampleVisibleGGX(N, V, alpha_u, alpha_v, vec2f(random(), random()));
+	    H = ToWorld(H, N);
+	    world_L = reflect(-V, H);
+	    vec3f L = world_L;
+
+		float NdotV = dot(N, V);
+	    float NdotL = dot(N, L);
+
+	    if (NdotV <= 0.0f || NdotL <= 0.0f) {
+		    return 0.0f;
+	    }
+
+		float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
+		F = FresnelDielectric(V, H, 1.0f / 1.5f);
+		float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
+	    float D = DistributionGGX(H, N, alpha_u, alpha_v);
+	    float coat_pdf = Dv * abs(1.0f / (4.0f * dot(V, H)));
+        float cond_pdf = 0.0f;
+	    vec3f cond_brdf = EvaluateConductor(isect, world_V, world_L, cond_pdf);
+		vec3f coat_brdf = F * D * G / (4.0f * NdotV * NdotL);
+
+	    vec3f brdf = F * coat_brdf + (1.0f - F) * cond_brdf;
+	    pdf = F * coat_pdf + (1.0f - F) * cond_pdf;
+
+		return brdf;
+	}
+	else {
+		float cond_pdf = 0.0f;
+		vec3f cond_brdf = SampleConductor(isect, random, world_V, world_L, cond_pdf);
+		vec3f L = world_L;
+		H = normalize(V + L);
+
+		float NdotV = dot(N, V);
+	    float NdotL = dot(N, L);
+
+	    if (NdotV <= 0.0f || NdotL <= 0.0f) {
+		    return 0.0f;
+	    }
+
+		float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
+		F = FresnelDielectric(V, H, 1.0f / 1.5f);
+		float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
+	    float D = DistributionGGX(H, N, alpha_u, alpha_v);
+	    float coat_pdf = Dv * abs(1.0f / (4.0f * dot(V, H)));
+		vec3f coat_brdf = F * D * G / (4.0f * NdotV * NdotL);
+
+		vec3f brdf = F * coat_brdf + (1.0f - F) * cond_brdf;
+	    pdf = F * coat_pdf + (1.0f - F) * cond_pdf;
+
+		return brdf;
+	}
+}
+//*************************************clearcoated conductor*************************************
+
 //*************************************material*************************************
 __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	const vec3f& world_V, const vec3f& world_L, float& pdf) {
@@ -614,6 +714,9 @@ __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	}
 	else if (isect.material.type == MaterialType::ThinDielectric) {
 		bsdf = EvaluateThinDielectric(isect, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::ClearCoatedConductor) {
+		bsdf = EvaluateClearCoatedConductor(isect, world_V, world_L, pdf);
 	}
 
 	return bsdf;
@@ -640,6 +743,9 @@ __forceinline__ __device__ vec3f SampleMaterial(const Interaction& isect, Random
 	}
 	else if (isect.material.type == MaterialType::ThinDielectric) {
 		bsdf = SampleThinDielectric(isect, random, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::ClearCoatedConductor) {
+		bsdf = SampleClearCoatedConductor(isect, random, world_V, world_L, pdf);
 	}
 
 	return bsdf;
