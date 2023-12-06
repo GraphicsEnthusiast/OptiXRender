@@ -345,6 +345,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                 Ray shadowRay;
                 shadowRay.origin = prd.isect.position;
                 light_radiance = SampleLight(light, shadowRay.origin, vec2f(prd.random(), prd.random()), shadowRay.direction, light_distance, light_pdf);
+                light_radiance *= lights.lightSize;
                 optixTrace(optixLaunchParams.traversable,
                     shadowRay.origin,
                     shadowRay.direction,

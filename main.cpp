@@ -141,7 +141,7 @@ namespace osc {
 
             Material m;
             m.type = MaterialType::ClearCoatedConductor;
-            m.roughness = 0.3f;
+            m.roughness = 0.5f;
             TextureFile t;
 			scene.AddMesh(
 				"../../models/body.obj",
