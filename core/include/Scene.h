@@ -60,6 +60,8 @@ struct Material {
     int metallicTextureID = -1;
     cudaTextureObject_t metallic_texture;
 
+    float coat_weight = 3.0f;
+
     float coat_roughness_u = 0.1f;
     int coat_roughness_uTextureID = -1;
     cudaTextureObject_t coat_roughness_u_texture;

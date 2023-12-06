@@ -613,16 +613,17 @@ __forceinline__ __device__ vec3f EvaluateClearCoatedConductor(const Interaction&
 	}
 
 	float F = FresnelDielectric(V, H, 1.0f / 1.5f);
+	float coat_weight = isect.material.coat_weight * F;
 	float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
 	float D = DistributionGGX(H, N, alpha_u, alpha_v);
 
     float cond_pdf = 0.0f;
 	float coat_pdf = Dv * abs(1.0f / (4.0f * dot(V, H)));
 	vec3f cond_brdf = EvaluateConductor(isect, world_V, world_L, cond_pdf);
-	vec3f coat_brdf = F * D * G / (4.0f * NdotV * NdotL);
+	vec3f coat_brdf = D * G / (4.0f * NdotV * NdotL);
 
-	vec3f brdf = F * coat_brdf + (1.0f - F) * cond_brdf;
-	pdf = F * coat_pdf + (1.0f - F) * cond_pdf;
+	vec3f brdf = coat_weight * coat_brdf + (1.0f - coat_weight) * cond_brdf;
+	pdf = coat_weight * coat_pdf + (1.0f - coat_weight) * cond_pdf;
 
 	return brdf;
 }
@@ -637,7 +638,8 @@ __forceinline__ __device__ vec3f SampleClearCoatedConductor(const Interaction& i
 	vec3f H;
 
     float F = FresnelDielectric(V, N, 1.0f / 1.5f);
-	if(random() < F * 10.0f) {
+	float coat_weight = isect.material.coat_weight * F;
+	if(random() < coat_weight) {
 		H = SampleVisibleGGX(N, V, alpha_u, alpha_v, vec2f(random(), random()));
 	    H = ToWorld(H, N);
 	    world_L = reflect(-V, H);
@@ -652,15 +654,16 @@ __forceinline__ __device__ vec3f SampleClearCoatedConductor(const Interaction& i
 
 		float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
 		F = FresnelDielectric(V, H, 1.0f / 1.5f);
+		coat_weight = isect.material.coat_weight * F;
 		float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
 	    float D = DistributionGGX(H, N, alpha_u, alpha_v);
 	    float coat_pdf = Dv * abs(1.0f / (4.0f * dot(V, H)));
         float cond_pdf = 0.0f;
 	    vec3f cond_brdf = EvaluateConductor(isect, world_V, world_L, cond_pdf);
-		vec3f coat_brdf = F * D * G / (4.0f * NdotV * NdotL);
+		vec3f coat_brdf = D * G / (4.0f * NdotV * NdotL);
 
-	    vec3f brdf = F * coat_brdf + (1.0f - F) * cond_brdf;
-	    pdf = F * coat_pdf + (1.0f - F) * cond_pdf;
+	    vec3f brdf = coat_weight * coat_brdf + (1.0f - coat_weight) * cond_brdf;
+	    pdf = coat_weight * coat_pdf + (1.0f - coat_weight) * cond_pdf;
 
 		return brdf;
 	}
@@ -679,13 +682,14 @@ __forceinline__ __device__ vec3f SampleClearCoatedConductor(const Interaction& i
 
 		float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
 		F = FresnelDielectric(V, H, 1.0f / 1.5f);
+		coat_weight = isect.material.coat_weight * F;
 		float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
 	    float D = DistributionGGX(H, N, alpha_u, alpha_v);
 	    float coat_pdf = Dv * abs(1.0f / (4.0f * dot(V, H)));
-		vec3f coat_brdf = F * D * G / (4.0f * NdotV * NdotL);
+		vec3f coat_brdf = D * G / (4.0f * NdotV * NdotL);
 
-		vec3f brdf = F * coat_brdf + (1.0f - F) * cond_brdf;
-	    pdf = F * coat_pdf + (1.0f - F) * cond_pdf;
+		vec3f brdf = coat_weight * coat_brdf + (1.0f - coat_weight) * cond_brdf;
+	    pdf = coat_weight * coat_pdf + (1.0f - coat_weight) * cond_pdf;
 
 		return brdf;
 	}
