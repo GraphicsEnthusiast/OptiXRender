@@ -210,7 +210,7 @@ extern "C" __global__ void __raygen__renderFrame() {
         // screen then the actual screen plane we shuld be using during
         // rendreing is slightly larger than [0,1]^2
         vec2f jitter = FilterJitter(vec2f(prd.random(), prd.random()), optixLaunchParams.filterType);
-        vec2f screen(vec2f(ix + jitter.x, iy + jitter.y)
+        vec2f screen(vec2f(ix + 0.5f + jitter.x, iy + 0.5f + jitter.y)
             / vec2f(optixLaunchParams.frame.size));
 
         // generate ray direction
