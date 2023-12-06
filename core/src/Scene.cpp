@@ -38,6 +38,10 @@ void Scene::AddMesh(const std::string& objFile, Material& material, const Textur
 		material.specularTextureID = this->textures.size();
 		AddTexture(textureFile.specularFile);
 	}
+	if (textureFile.metallicFile != "") {
+		material.metallicTextureID = this->textures.size();
+		AddTexture(textureFile.metallicFile);
+	}
 	if (textureFile.normalFile != "") {
 		material.normalTextureID = this->textures.size();
 		AddTexture(textureFile.normalFile);

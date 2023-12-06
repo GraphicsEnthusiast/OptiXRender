@@ -98,6 +98,9 @@ extern "C" __global__ void __closesthit__radiance() {
     if (material.specularTextureID != -1) {
         material.specular = (vec3f)tex2D<float4>(material.specular_texture, tc.x, tc.y);
     }
+    if (material.metallicTextureID != -1) {
+        material.metallic = tex2D<float4>(material.metallic_texture, tc.x, tc.y).x;
+    }
     if (material.normalTextureID != -1) {
         vec3f t_normal = (vec3f)tex2D<float4>(material.normal_texture, tc.x, tc.y);
         Ns = NormalFromTangentToWorld(Ns, t_normal);

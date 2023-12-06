@@ -18,6 +18,10 @@ __forceinline__ __device__ float mix(float x, float y, float t) {
 	return x * (1.0f - t) + y * t;
 }
 
+__forceinline__ __device__ vec3f mix(vec3f x, vec3f y, float t) {
+	return x * (1.0f - t) + y * t;
+}
+
 __forceinline__ __device__ vec3f reflect(const vec3f& v, const vec3f& n) {
 	return normalize(v - 2.0f * dot(v, n) * n);
 }

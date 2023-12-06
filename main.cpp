@@ -125,6 +125,7 @@ namespace osc {
         Material material;
         textureFile.albedoFile = "../../models/01_Head_Base_Color.png";
         textureFile.roughnessFile = "../../models/01_Head_Roughness.png";
+        textureFile.metallicFile = "../../models/01_Head_Metallic.png";
         textureFile.normalFile = "../../models/01_Head_Normal_DirectX.png";
         try {
             Scene scene;
@@ -135,6 +136,7 @@ namespace osc {
             );
             textureFile.albedoFile = "../../models/02_Body_Base_Color.png";
             textureFile.roughnessFile = "../../models/02_Body_Roughness.png";
+            textureFile.metallicFile = "../../models/02_Body_Metallic.png";
             textureFile.normalFile = "../../models/02_Body_Normal_DirectX.png";
 
             Material m;
@@ -147,6 +149,7 @@ namespace osc {
 				t
 			);
             textureFile.albedoFile = "../../models/03_Base_Base_Color.png";
+            textureFile.metallicFile = "../../models/03_Base_Metallic.png";
             textureFile.roughnessFile = "../../models/03_Base_Roughness.png";
             textureFile.normalFile = "../../models/03_Base_Normal_DirectX.png";
 			scene.AddMesh(

@@ -23,11 +23,12 @@ enum MaterialType {
     Diffuse,
     Conductor,
     Dielectric,
-    Plastic
+    Plastic,
+    MetalWorkflow,
 };
 
 struct Material {
-    MaterialType type = MaterialType::Plastic;
+    MaterialType type = MaterialType::MetalWorkflow;
 
     vec3f albedo = 1.0f;
     int albedoTextureID = -1;
@@ -52,6 +53,10 @@ struct Material {
     vec3f specular = 1.0f;
     int specularTextureID = -1;
     cudaTextureObject_t specular_texture;
+
+    float metallic = 0.8f;
+    int metallicTextureID = -1;
+    cudaTextureObject_t metallic_texture;
 
     int normalTextureID = -1;
     cudaTextureObject_t normal_texture;
@@ -101,6 +106,7 @@ struct TextureFile {
 	std::string roughnessFile = "";
 	std::string anisotropyFile = "";
 	std::string specularFile = "";
+    std::string metallicFile = "";
     std::string normalFile = "";
 };
 

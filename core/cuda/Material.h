@@ -365,6 +365,119 @@ __forceinline__ __device__ vec3f SamplePlastic(const Interaction& isect, Random&
 }
 //*************************************plastic*************************************
 
+//*************************************metal workflow*************************************
+__forceinline__ __device__ vec3f EvaluateMetalWorkflow(const Interaction& isect,
+	const vec3f& world_V, const vec3f& world_L, float& pdf) {
+	float roughness = isect.material.roughness;
+	float aniso = isect.material.anisotropy;
+	float alpha_u = sqr(roughness) * (1.0f + aniso);
+	float alpha_v = sqr(roughness) * (1.0f - aniso);
+	float eta = isect.material.int_ior / isect.material.ext_ior;
+	float metallic = isect.material.metallic;
+	vec3f albedo = isect.material.albedo;
+	bool nonlinear = isect.material.nonlinear;
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+	vec3f L = world_L;
+	vec3f H = normalize(L + V);
+
+	float NdotV = dot(N, V);
+	float NdotL = dot(N, L);
+	if (NdotV <= 0.0f || NdotL <= 0.0f) {
+		return 0.0f;
+	}
+
+	float metallic_brdf = metallic;
+	float dieletric_brdf = (1.0f - metallic);
+	float diffuse = dieletric_brdf;
+	float specular = metallic_brdf + dieletric_brdf;
+	float deom = diffuse + specular;
+	float p_diffuse = diffuse / deom;
+
+	float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
+	float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
+	float D = DistributionGGX(H, N, alpha_u, alpha_v);
+	vec3f F0 = mix(vec3f(0.04f), albedo, metallic);
+	vec3f F = FresnelSchlick(F0, dot(V, H));
+
+	vec3f specular_brdf = D * F * G / (4.0f * NdotL * NdotV);
+	vec3f diffuse_brdf = albedo * M_1_PIf;
+	vec3f brdf = p_diffuse * diffuse_brdf + (1.0f - p_diffuse) * specular_brdf;
+
+	pdf = (1.0f - p_diffuse) * Dv * abs(1.0f / (4.0f * dot(V, H))) + p_diffuse * CosinePdfHemisphere(NdotL);
+
+	return brdf;
+}
+
+__forceinline__ __device__ vec3f SampleMetalWorkflow(const Interaction& isect, Random& random,
+	const vec3f& world_V, vec3f& world_L, float& pdf) {
+	float roughness = isect.material.roughness;
+	float aniso = isect.material.anisotropy;
+	float alpha_u = sqr(roughness) * (1.0f + aniso);
+	float alpha_v = sqr(roughness) * (1.0f - aniso);
+	float eta = isect.material.int_ior / isect.material.ext_ior;
+	float metallic = isect.material.metallic;
+	vec3f albedo = isect.material.albedo;
+	bool nonlinear = isect.material.nonlinear;
+
+	vec3f N = isect.shadeNormal;
+	vec3f V = world_V;
+
+	float NdotV = dot(N, V);
+	if (NdotV <= 0.0f) {
+		return 0.0f;
+	}
+
+	float metallic_brdf = metallic;
+	float dieletric_brdf = (1.0f - metallic);
+	float diffuse = dieletric_brdf;
+	float specular = metallic_brdf + dieletric_brdf;
+	float deom = diffuse + specular;
+	float p_diffuse = diffuse / deom;
+
+	vec3f L = 0.0f;
+	vec3f H = 0.0f;
+	float NdotL = 0.0f;
+	if (random() < p_diffuse) {
+		vec3f local_L = CosineSampleHemisphere(vec2f(random(), random()));
+		world_L = ToWorld(local_L, N);
+		L = world_L;
+		H = normalize(V + L);
+
+		NdotL = dot(N, L);
+		if (NdotL <= 0.0f) {
+			return 0.0f;
+		}
+	}
+	else {
+		H = SampleVisibleGGX(N, V, alpha_u, alpha_v, vec2f(random(), random()));
+		H = ToWorld(H, N);
+
+		world_L = reflect(-V, H);
+		L = world_L;
+
+		NdotL = dot(N, L);
+		if (NdotL <= 0.0f) {
+			return 0.0f;
+		}
+	}
+	float Dv = DistributionVisibleGGX(V, H, N, alpha_u, alpha_v);
+	float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
+	float D = DistributionGGX(H, N, alpha_u, alpha_v);
+	vec3f F0 = mix(vec3f(0.04f), albedo, metallic);
+	vec3f F = FresnelSchlick(F0, dot(V, H));
+
+	vec3f specular_brdf = D * F * G / (4.0f * NdotL * NdotV);
+	vec3f diffuse_brdf = albedo * M_1_PIf;
+	vec3f brdf = p_diffuse * diffuse_brdf + (1.0f - p_diffuse) * specular_brdf;
+
+	pdf = (1.0f - p_diffuse) * Dv * abs(1.0f / (4.0f * dot(V, H))) + p_diffuse * CosinePdfHemisphere(NdotL);
+
+	return brdf;
+}
+//*************************************metal workflow*************************************
+
 //*************************************material*************************************
 __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	const vec3f& world_V, const vec3f& world_L, float& pdf) {
@@ -381,6 +494,9 @@ __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	}
 	else if (isect.material.type == MaterialType::Plastic) {
 		bsdf = EvaluatePlastic(isect, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::MetalWorkflow) {
+		bsdf = EvaluateMetalWorkflow(isect, world_V, world_L, pdf);
 	}
 
 	return bsdf;
@@ -401,6 +517,9 @@ __forceinline__ __device__ vec3f SampleMaterial(const Interaction& isect, Random
 	}
 	else if (isect.material.type == MaterialType::Plastic) {
 		bsdf = SamplePlastic(isect, random, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::MetalWorkflow) {
+		bsdf = SampleMetalWorkflow(isect, random, world_V, world_L, pdf);
 	}
 
 	return bsdf;

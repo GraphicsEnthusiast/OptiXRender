@@ -6,6 +6,22 @@
 typedef gdt::LCG<16> Random;
 
 //*************************************fresnel*************************************
+__forceinline__ __device__ float FresnelSchlick(float f0, float VdotH) {
+	float tmp = 1.0f - clamp(VdotH, 0.0f, 1.0f);
+	float tmp2 = tmp * tmp;
+	float Fc = tmp2 * tmp2 * tmp;
+
+	return f0 + (1.0f - f0) * Fc;
+}
+
+__forceinline__ __device__ vec3f FresnelSchlick(vec3f f0, float VdotH) {
+	float tmp = 1.0f - clamp(VdotH, 0.0f, 1.0f);
+	float tmp2 = tmp * tmp;
+	float Fc = tmp2 * tmp2 * tmp;
+
+	return f0 + (1.0f - f0) * Fc;
+}
+
 __forceinline__ __device__ vec3f FresnelConductor(const vec3f& V, const vec3f& H, const vec3f& eta_r, const vec3f& eta_i) {
 	vec3f N = H;
 	float cos_v_n = dot(V, N),
