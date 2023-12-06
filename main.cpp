@@ -137,6 +137,7 @@ namespace osc {
 
             Material m;
             m.type = MaterialType::Dielectric;
+            m.roughness = 0.2f;
             TextureFile t;
 			scene.AddMesh(
 				"../../models/body.obj",

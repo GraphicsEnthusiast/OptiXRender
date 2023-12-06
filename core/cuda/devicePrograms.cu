@@ -396,6 +396,16 @@ extern "C" __global__ void __raygen__renderFrame() {
             ray.direction = L;
         }
 
+        // 这一步可以极大的减少白噪点（特别是由点光源产生）, 有偏
+ 		int lightNum = lights.lightSize;
+ 		if (optixLaunchParams.environment.hasEnv) {
+ 			lightNum++;
+ 		}
+ 		float illum = dot(radiance, vec3f(0.2126f, 0.7152f, 0.072f));
+		if (illum > lightNum) {
+ 			radiance *= lightNum / illum;
+ 		}
+
         pixelColor += radiance;
         pixelAlbedo += prd.pixelAlbedo;
         pixelNormal += prd.pixelNormal;
