@@ -2,6 +2,7 @@
 #include <cuda_runtime.h>
 
 #include "Utils.h"
+#include "Filter.h"
 #include "Light.h"
 #include "Material.h"
 #include "Environment.h"
@@ -208,7 +209,8 @@ extern "C" __global__ void __raygen__renderFrame() {
         // assume that the camera should only(!) cover the denoised
         // screen then the actual screen plane we shuld be using during
         // rendreing is slightly larger than [0,1]^2
-        vec2f screen(vec2f(ix + prd.random(), iy + prd.random())
+        vec2f jitter = FilterJitter(vec2f(prd.random(), prd.random()), optixLaunchParams.filterType);
+        vec2f screen(vec2f(ix + jitter.x, iy + jitter.y)
             / vec2f(optixLaunchParams.frame.size));
 
         // generate ray direction

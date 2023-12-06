@@ -11,6 +11,7 @@ add_library(core
     ./cuda/Material.h
     ./cuda/Light.h
     ./cuda/Environment.h
+    ./cuda/Filter.h
     ./include/LaunchParams.h
     ./include/Renderer.h
     ./include/Scene.h

@@ -53,6 +53,8 @@ struct LaunchParams {
 		int width, height;
 	} environment;
 
+	FilterType filterType = FilterType::Gaussian;
+
 	OptixTraversableHandle traversable;
 };
 
