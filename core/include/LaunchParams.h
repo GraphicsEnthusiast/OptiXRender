@@ -24,7 +24,7 @@ struct TriangleMeshSBTData {
 
 struct LaunchParams {
 	int numPixelSamples = 1;
-	int maxBounce = 5;
+	int maxBounce = 25;
 	struct {
 		int frameID = 0;
 		float4* colorBuffer;

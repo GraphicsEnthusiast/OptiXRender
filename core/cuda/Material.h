@@ -118,12 +118,6 @@ __forceinline__ __device__ vec3f EvaluateDielectric(const Interaction& isect,
 	float eta = isect.material.int_ior / isect.material.ext_ior;
 	float etai_over_etat = isect.frontFace ? (1.0f / eta) : (eta);
 	vec3f albedo = isect.material.albedo;
-	float F_avg_ = AverageFresnelDielectric(eta);
-	float F_avg_inv_ = AverageFresnelDielectric(1.0f / eta);
-	float F_avg = isect.frontFace ? (F_avg_inv_) : (F_avg_);
-	float F_avg_inv = !isect.frontFace ? (F_avg_inv_) : (F_avg_);
-	float ratio_trans = (1.0f - F_avg) * (1.0f - F_avg_inv) * sqr(etai_over_etat) /
-		((1.0f - F_avg) + (1.0f - F_avg_inv) * sqr(etai_over_etat));
 
 	vec3f N = isect.shadeNormal;
 	vec3f V = world_V;
@@ -151,12 +145,11 @@ __forceinline__ __device__ vec3f EvaluateDielectric(const Interaction& isect,
 	float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
 	float D = DistributionGGX(H, N, alpha_u, alpha_v);
 	vec3f bsdf = 0.0f;
-	vec3f bsdf_mult = EvaluateMultipleScatter(isect, NdotL, NdotV, roughness, 1.0f);
 	if (isReflect) {
 		float dwh_dwi = abs(1.0f / (4.0f * dot(V, H)));
 		pdf = F * Dv * dwh_dwi;
 
-		bsdf = albedo * (F * D * G / (4.0f * NdotV * NdotL) + (1.0f - ratio_trans) * bsdf_mult);
+		bsdf = albedo * F * D * G / (4.0f * NdotV * NdotL);
 	}
 	else {
 		float HdotV = dot(H, V);
@@ -167,7 +160,8 @@ __forceinline__ __device__ vec3f EvaluateDielectric(const Interaction& isect,
 		float dwh_dwi = abs(HdotL) / sqr(sqrtDenom);
 		pdf = (1.0f - F) * Dv * dwh_dwi;
 
-		bsdf = albedo * ((1.0f - F) * D * G * factor / sqr(sqrtDenom) + ratio_trans * bsdf_mult);
+		bsdf = albedo * (1.0f - F) * D * G * factor / sqr(sqrtDenom);
+		bsdf *= sqr(etai_over_etat);
 	}
 
 	return bsdf;
@@ -182,12 +176,6 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 	float eta = isect.material.int_ior / isect.material.ext_ior;
 	float etai_over_etat = isect.frontFace ? (1.0f / eta) : (eta);
 	vec3f albedo = isect.material.albedo;
-	float F_avg_ = AverageFresnelDielectric(eta);
-	float F_avg_inv_ = AverageFresnelDielectric(1.0f / eta);
-	float F_avg = isect.frontFace ? (F_avg_inv_) : (F_avg_);
-	float F_avg_inv = !isect.frontFace ? (F_avg_inv_) : (F_avg_);
-	float ratio_trans = (1.0f - F_avg) * (1.0f - F_avg_inv) * sqr(etai_over_etat) /
-		((1.0f - F_avg) + (1.0f - F_avg_inv) * sqr(etai_over_etat));
 
 	vec3f N = isect.shadeNormal;
 	vec3f V = world_V;
@@ -212,9 +200,8 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 		float NdotV = abs(dot(N, V));
 		float NdotL = abs(dot(N, L));
 		float G = GeometrySmith_1(V, H, N, alpha_u, alpha_v) * GeometrySmith_1(L, H, N, alpha_u, alpha_v);
-		vec3f bsdf_mult = EvaluateMultipleScatter(isect, NdotL, NdotV, roughness, 1.0f);
 
-		bsdf = albedo * (F * D * G / (4.0f * NdotV * NdotL) + (1.0f - ratio_trans) * bsdf_mult);
+		bsdf = albedo * F * D * G / (4.0f * NdotV * NdotL);
 	}
 	else {
 		world_L = refract(-V, H, etai_over_etat);
@@ -235,9 +222,9 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 
 		float dwh_dwi = abs(HdotL) / sqr(sqrtDenom);
 		pdf = (1.0f - F) * Dv * dwh_dwi;
-		vec3f bsdf_mult = EvaluateMultipleScatter(isect, NdotL, NdotV, roughness, 1.0f);
 
-		bsdf = albedo * ((1.0f - F) * D * G * factor / sqr(sqrtDenom) + ratio_trans * bsdf_mult);
+		bsdf = albedo * (1.0f - F) * D * G * factor / sqr(sqrtDenom);
+		bsdf *= sqr(etai_over_etat);
 	}
 
 	return bsdf;

@@ -134,10 +134,14 @@ namespace osc {
             );
             textureFile.albedoFile = "../../models/02_Body_Base_Color.png";
             textureFile.normalFile = "../../models/02_Body_Normal_DirectX.png";
+
+            Material m;
+            m.type = MaterialType::Dielectric;
+            TextureFile t;
 			scene.AddMesh(
 				"../../models/body.obj",
-				material,
-				textureFile
+				m,
+				t
 			);
             textureFile.albedoFile = "../../models/03_Base_Base_Color.png";
             textureFile.normalFile = "../../models/03_Base_Normal_DirectX.png";

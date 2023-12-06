@@ -29,7 +29,7 @@ enum MaterialType {
 struct Material {
     MaterialType type = MaterialType::Plastic;
 
-    vec3f albedo = 0.8f;
+    vec3f albedo = 1.0f;
     int albedoTextureID = -1;
     cudaTextureObject_t albedo_texture;
 
