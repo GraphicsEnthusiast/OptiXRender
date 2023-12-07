@@ -1,9 +1,6 @@
 #pragma once
 
 #include "Utils.h"
-#include "gdt/random/random.h"
-
-typedef gdt::LCG<16> Random;
 
 //*************************************fresnel*************************************
 __forceinline__ __device__ float FresnelSchlick(float f0, float VdotH) {

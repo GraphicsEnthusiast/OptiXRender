@@ -9,8 +9,8 @@ __forceinline__ __device__ vec2f FilterBox(const vec2f& sample) {
 __forceinline__ __device__ vec2f FilterTent(const vec2f& sample) {
 	vec2f j = sample;
 	j = j * 2.0f;
-	j.x = j.x < 1.0f ? sqrt(j.x) - 1.0f : 1.0f - sqrt(2.0f - j.x);
-	j.y = j.y < 1.0f ? sqrt(j.y) - 1.0f : 1.0f - sqrt(2.0f - j.y);
+	j.x = j.x < 1.0f ? sqrt(j.x) -1.0f : 1.0f - sqrt(2.0f - j.x);
+	j.y = j.y < 1.0f ? sqrt(j.y) -1.0f : 1.0f - sqrt(2.0f - j.y);
 
 	return vec2f(0.5f, 0.5f) + j;
 }

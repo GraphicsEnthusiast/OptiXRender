@@ -6,29 +6,67 @@
 //*************************************diffuse*************************************
 __forceinline__ __device__ vec3f EvaluateDiffuse(const Interaction& isect,
 	const vec3f& world_V, const vec3f& world_L, float& pdf) {
+	float roughness = isect.material.roughness;
+	vec3f albedo = isect.material.albedo;
+
 	vec3f local_L = ToLocal(world_L, isect.shadeNormal);
+	vec3f V = world_V;
+	vec3f L = world_L;
+	vec3f N = isect.shadeNormal;
+	vec3f H = normalize(V + L);
 	float NdotL = local_L.z;
-	pdf = CosinePdfHemisphere(NdotL);
-	if (NdotL <= 0.0f) {
+	float NdotV = dot(N, V);
+	float VdotH = dot(V, H);
+
+	if (NdotL <= 0.0f || NdotV <= 0.0f) {
 		return 0.0f;
 	}
 
-	vec3f brdf = isect.material.albedo * M_1_PIf;
+	float a = roughness * roughness;
+	float s = a;
+	float s2 = s * s;
+	float VdotL = 2.0f * VdotH * VdotH - 1.0f;
+	float Cosri = VdotL - NdotV * NdotL;
+	float C1 = 1.0f - 0.5f * s2 / (s2 + 0.33f);
+	float C2 = 0.45f * s2 / (s2 + 0.09f) * Cosri * (Cosri >= 0.0f ? (max(NdotL, NdotV)) : 1.0f);
+
+	vec3f brdf = albedo * M_1_PIf * (C1 + C2) * (1.0f + roughness * 0.5f);
+
+	pdf = CosinePdfHemisphere(NdotL);
 
 	return brdf;
 }
 
 __forceinline__ __device__ vec3f SampleDiffuse(const Interaction& isect, Random& random,
 	const vec3f& world_V, vec3f& world_L, float& pdf) {
+	float roughness = isect.material.roughness;
+	vec3f albedo = isect.material.albedo;
+
 	vec3f local_L = CosineSampleHemisphere(vec2f(random(), random()));
 	world_L = ToWorld(local_L, isect.shadeNormal);
+	vec3f V = world_V;
+	vec3f L = world_L;
+	vec3f N = isect.shadeNormal;
+	vec3f H = normalize(V + L);
 	float NdotL = local_L.z;
-	pdf = CosinePdfHemisphere(NdotL);
-	if (NdotL <= 0.0f) {
+	float NdotV = dot(N, V);
+	float VdotH = dot(V, H);
+	
+	if (NdotL <= 0.0f || NdotV <= 0.0f) {
 		return 0.0f;
 	}
 
-	vec3f brdf = isect.material.albedo * M_1_PIf;
+	float a = roughness * roughness;
+	float s = a;
+	float s2 = s * s;
+	float VdotL = 2.0f * VdotH * VdotH - 1.0f;
+	float Cosri = VdotL - NdotV * NdotL;
+	float C1 = 1.0f - 0.5f * s2 / (s2 + 0.33f);
+	float C2 = 0.45f * s2 / (s2 + 0.09f) * Cosri * (Cosri >= 0.0f ? (max(NdotL, NdotV)) : 1.0f);
+
+	vec3f brdf = albedo * M_1_PIf * (C1 + C2) * (1.0f + roughness * 0.5f);
+
+	pdf = CosinePdfHemisphere(NdotL);
 
 	return brdf;
 }

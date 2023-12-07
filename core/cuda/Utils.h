@@ -3,6 +3,9 @@
 #include "gdt/math/vec.h"
 #include "../include/LaunchParams.h"
 #include "math.h"
+#include "gdt/random/random.h"
+
+typedef gdt::LCG<16> Random;
 
 #define EPS 1e-4f
 #define M_PIf 3.14159265358979323846f
