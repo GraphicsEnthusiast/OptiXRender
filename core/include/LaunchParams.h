@@ -20,6 +20,9 @@ struct TriangleMeshSBTData {
 	vec3i* index;
 
 	Material material;
+
+	int in_medium = -1;
+    int out_medium = -1;
 };
 
 struct LaunchParams {
@@ -40,12 +43,19 @@ struct LaunchParams {
 		vec3f direction;
 		vec3f horizontal;
 		vec3f vertical;
+
+		int medium = -1;
 	} camera;
 
 	struct {
 		int lightSize = 0;
 		Light* lightsBuffer = nullptr;
 	} lights;
+
+	struct {
+		int mediumSize = 0;
+		Medium* mediumsBuffer = nullptr;
+	} mediums;
 
 	struct {
 		bool hasEnv = false;

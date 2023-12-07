@@ -15,6 +15,8 @@ struct Camera {
     vec3f at;
     /*! general up-vector */
     vec3f up;
+
+    int medium = -1;
 };
 //*************************************camera*************************************
 
@@ -26,6 +28,32 @@ enum FilterType{
     Gaussian
 };
 //*************************************filter*************************************
+
+//*************************************medium*************************************
+enum PhaseType {
+    Isotropic,
+    HenyeyGreenstein
+};
+
+struct Phase {
+    PhaseType type = PhaseType::Isotropic;
+
+    vec3f g;
+};
+
+enum MediumType {
+    Homogeneous
+};
+
+struct Medium {
+    MediumType type = MediumType::Homogeneous;
+    Phase phase;
+
+    vec3f albedo;
+    vec3f sigma_t;
+    float scale;
+};
+//*************************************medium*************************************
 
 //*************************************material*************************************
 enum MaterialType {
@@ -99,6 +127,9 @@ struct TriangleMesh {
     std::vector<vec3i> index;
 
     Material material;
+
+    int in_medium = -1;
+    int out_medium = -1;
 };
 //*************************************triangle mesh*************************************
 
@@ -118,6 +149,9 @@ struct Light {
     vec3f v{ 6.0f, 0.0f, 0.0f };
 
     float radius = 3.0f;
+
+    int in_medium = -1;
+    int out_medium = -1;
 };
 //*************************************light*************************************
 
@@ -166,12 +200,14 @@ public:
     void AddMesh(const std::string& objFile, Material& material, const TextureFile& textureFile);
     void AddTexture(const std::string& fileName);
     void AddLight(const Light& l);
+    void AddMedium(const Medium& m);
     void AddEnv(const std::string& fileName);
 
 public:
     std::vector<TriangleMesh*> meshes;
     std::vector<Texture*> textures;
     std::vector<Light> lights;
+    std::vector<Medium> mediums;
     HdrTexture* env = NULL;
     //! bounding box of all vertices in the scene
     box3f bounds;

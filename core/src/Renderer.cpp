@@ -46,6 +46,13 @@ Renderer::Renderer(const Scene* scene) : scene(scene) {
 		launchParams.lights.lightSize = this->scene->lights.size();
     }
 
+    if (this->scene->mediums.size() != 0) {
+        CUDABuffer mediumsBuffer;
+		mediumsBuffer.alloc_and_upload(this->scene->mediums);
+		launchParams.mediums.mediumsBuffer = (Medium*)mediumsBuffer.d_pointer();
+		launchParams.mediums.mediumSize = this->scene->mediums.size();
+    }
+
     std::cout << "creating optix context ..." << std::endl;
     CreateContext();
 
@@ -582,6 +589,8 @@ void Renderer::BuildSBT() {
 
             HitgroupRecord rec;
             OPTIX_CHECK(optixSbtRecordPackHeader(hitgroupPGs[rayID], &rec));
+            rec.data.in_medium = mesh->in_medium;
+            rec.data.out_medium = mesh->out_medium;
             rec.data.material = mesh->material;
             if (rec.data.material.albedoTextureID != -1) {
                 rec.data.material.albedo_texture = textureObjects[rec.data.material.albedoTextureID];
@@ -788,6 +797,7 @@ void Renderer::SetCamera(const Camera& camera) {
     lastSetCamera = camera;
     // reset accumulation
     launchParams.frame.frameID = 0;
+    launchParams.camera.medium = camera.medium;
     launchParams.camera.position = camera.from;
     launchParams.camera.direction = normalize(camera.at - camera.from);
     const float cosFovy = 0.66f;

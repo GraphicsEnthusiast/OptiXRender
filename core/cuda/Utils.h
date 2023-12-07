@@ -42,12 +42,30 @@ struct Ray {
 	vec3f direction;
 };
 
+struct MediumInterface {
+	__device__ MediumInterface() : in_medium(-1), out_medium(-1) {}
+	__device__ MediumInterface(int medium) : in_medium(medium), out_medium(medium) {}
+	__device__ MediumInterface(int inside, int outside) : in_medium(inside), out_medium(outside) {}
+
+	__forceinline__ __device__ int GetMedium(bool frontFace) {
+		if (frontFace) {
+			return out_medium;
+		}
+		else {
+			return in_medium;
+		}
+	}
+
+	int in_medium, out_medium;
+};
+
 struct Interaction {
 	float distance;
 	vec3f position;
 	vec3f shadeNormal;
 	bool frontFace;
 	Material material;
+	MediumInterface mi;
 
 	__forceinline__ __device__ void SetFaceNormal(const vec3f& dir, const vec3f& outward_normal) {
 		frontFace = dot(dir, outward_normal) < 0.0f;

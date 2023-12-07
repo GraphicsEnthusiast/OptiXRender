@@ -121,6 +121,10 @@ extern "C" __global__ void __closesthit__radiance() {
     prd.isect.distance = length(surfPos - prd.isect.position);
     prd.isect.position = surfPos;
     prd.isect.material = material;
+
+    MediumInterface mi(sbtData.in_medium, sbtData.out_medium);
+    prd.isect.mi = mi;
+    
     if (prd.firstBounce) {
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = material.albedo;
@@ -235,6 +239,9 @@ extern "C" __global__ void __raygen__renderFrame() {
         prd.isect.distance = 0.0f;
         prd.isect.position = ray.origin;
         prd.firstBounce = true;
+
+        MediumInterface mi(camera.medium);
+        prd.isect.mi = mi;
 
         for (int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
             //*************************场景中的物体以及灯光求交*************************
