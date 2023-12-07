@@ -71,3 +71,37 @@ __forceinline__ __device__ float CosinePdfHemisphere(float NdotL) {
 	return NdotL * M_1_PIf;
 }
 //*************************************cosine*************************************
+
+//*************************************sphere*************************************
+__forceinline__ __device__ vec3f UniformSampleSphere(const vec2f& sample) {
+	vec3f p = 0.0f;
+
+	float phi = M_2PIf * sample.x;
+	float cos_theta = 1.0f - 2.0f * sample.y;
+	float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+
+	p.x = sin_theta * cos(phi);
+	p.y = sin_theta * sin(phi);
+	p.z = cos_theta;
+
+	return normalize(p);
+}
+
+__forceinline__ __device__ float UniformPdfSphere() {
+	return 1.0f / (4.0f * M_PIf);
+}
+//*************************************sphere*************************************
+
+//*************************************hemisphere*************************************
+__forceinline__ __device__ vec3f UniformSampleHemisphere(const vec2f& sample) {
+	float r = sqrt(max(0.0f, 1.0f - sample.x * sample.x));
+	float phi = M_2PIf * sample.y;
+	vec3f p(r * cos(phi), r * sin(phi), sample.x);
+
+	return normalize(p);
+}
+
+__forceinline__ __device__ float UniformPdfHemisphere() {
+	return 1.0f / M_2PIf;
+}
+//*************************************hemisphere*************************************

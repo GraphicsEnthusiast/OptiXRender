@@ -160,6 +160,7 @@ namespace osc {
             material = Material();
             material.type = MaterialType::Diffuse;
             textureFile.albedoFile = "../../models/grid.jpg";
+            textureFile.roughnessFile = "../../models/rusty_metal_sheet_rough_1k.png";
             textureFile.normalFile = "";
 			scene.AddMesh(
 				"../../models/plane.obj",
