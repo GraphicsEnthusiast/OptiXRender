@@ -300,7 +300,8 @@ extern "C" __global__ void __raygen__renderFrame() {
                 break;
             }
             //*************************场景中的物体以及灯光求交*************************
-
+            
+            // 采样直接光照
             if (optixLaunchParams.environment.hasEnv) {
                 prd.lightVisible = false;
                 
