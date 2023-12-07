@@ -186,7 +186,7 @@ extern "C" __global__ void __raygen__renderFrame() {
     vec3f pixelNormal = 0.0f;
     vec3f pixelAlbedo = 0.0f;
 
-    auto lightTrace = [&lights](const Ray& ray, vec3f& light_radiance, float& light_pdf, float closest_distance) -> bool {
+    auto lightTrace = [&lights](const Ray& ray, vec3f& light_radiance, float& light_pdf, float& closest_distance) -> bool {
         bool hitLight = false;
         for (int i = 0; i < lights.lightSize; i++) {
             const Light& light = lights.lightsBuffer[i];
@@ -258,9 +258,11 @@ extern "C" __global__ void __raygen__renderFrame() {
                 RAY_TYPE_COUNT,               // SBT stride
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
-
             closest_distance = prd.isect.distance;
-            if (lightTrace(ray, light_radiance, light_pdf, closest_distance)) {
+            bool hitLight = lightTrace(ray, light_radiance, light_pdf, closest_distance);
+
+            // 处理光源
+            if (hitLight) {
                 float misWeight = 1.0f;
                 if (bounce != 0) {
                     if (!IsValid(light_pdf)) {
@@ -273,7 +275,8 @@ extern "C" __global__ void __raygen__renderFrame() {
 
                 break;
             }
-
+            
+            // 处理环境
             bool notHit = prd.isect.distance == FLT_MAX;
             if (notHit) {
                 if (optixLaunchParams.environment.hasEnv) {
@@ -330,7 +333,8 @@ extern "C" __global__ void __raygen__renderFrame() {
                     u0, u1);
 
                 vec3f tv; float t;
-                if (!lightTrace(shadowRay, tv, t, FLT_MAX) && prd.lightVisible) {
+                closest_distance = FLT_MAX;
+                if (!lightTrace(shadowRay, tv, t, closest_distance) && prd.lightVisible) {
                     bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
                     float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
 
@@ -374,7 +378,8 @@ extern "C" __global__ void __raygen__renderFrame() {
                     u0, u1);
 
                 vec3f tv; float t;
-                if (!lightTrace(shadowRay, tv, t, light_distance - EPS) && prd.lightVisible) {
+                closest_distance = light_distance - EPS;
+                if (!lightTrace(shadowRay, tv, t, closest_distance) && prd.lightVisible) {
                     bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
                     float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
 
