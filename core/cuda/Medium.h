@@ -175,11 +175,11 @@ __forceinline__ __device__ bool SampleHomogeneousDistance(const Medium& medium, 
 
 	bool scattered = false;
 	float xi_1 = random();
-	if (xi_1 < medium_sampling_weight) { //抽样光线在介质内部是否发生散射
+	if (xi_1 < medium_sampling_weight) { // 抽样光线在介质内部是否发生散射
 		xi_1 /= medium_sampling_weight;
 		const int channel = min(static_cast<int>(random() * 3), 2);
 		distance = -log(1.0f - xi_1) / sigma_t[channel];
-		if (distance < max_distance) { //光线在介质内部发生了散射
+		if (distance < max_distance) { // 光线在介质内部发生了散射
 			trans_pdf = 0.0f;
 			for (int dim = 0; dim < 3; ++dim) {
 				trans_pdf += sigma_t[dim] * exp(-sigma_t[dim] * distance);
@@ -189,7 +189,7 @@ __forceinline__ __device__ bool SampleHomogeneousDistance(const Medium& medium, 
 		}
 	}
 
-	if (!scattered) { //光线在介质内部没有发生散射
+	if (!scattered) { // 光线在介质内部没有发生散射
 		distance = max_distance;
 		trans_pdf = 0.0f;
 		for (int dim = 0; dim < 3; ++dim) {
