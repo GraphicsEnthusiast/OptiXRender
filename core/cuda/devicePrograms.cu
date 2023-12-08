@@ -260,6 +260,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                 u0, u1);
             closest_distance = prd.isect.distance;
             bool hitLight = lightTrace(ray, light_radiance, light_pdf, closest_distance);
+            //*************************场景中的物体以及灯光求交*************************
 
             // 处理光源
             if (hitLight) {
@@ -299,7 +300,6 @@ extern "C" __global__ void __raygen__renderFrame() {
                 }
                 break;
             }
-            //*************************场景中的物体以及灯光求交*************************
             
             // 采样直接光照
             if (optixLaunchParams.environment.hasEnv) {
