@@ -63,7 +63,8 @@ enum MaterialType {
     Plastic,
     MetalWorkflow,
     ThinDielectric,
-    ClearCoatedConductor
+    ClearCoatedConductor,
+    DiffuseTransmitter
 };
 
 struct Material {
@@ -97,7 +98,7 @@ struct Material {
     int metallicTextureID = -1;
     cudaTextureObject_t metallic_texture;
 
-    float coat_weight = 3.0f;
+    float coat_weight = 2.0f;
 
     float coat_roughness_u = 0.1f;
     int coat_roughness_uTextureID = -1;

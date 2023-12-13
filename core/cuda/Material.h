@@ -734,6 +734,51 @@ __forceinline__ __device__ vec3f SampleClearCoatedConductor(const Interaction& i
 }
 //*************************************clearcoated conductor*************************************
 
+//*************************************diffuse transmitter*************************************
+__forceinline__ __device__ vec3f EvaluateDiffuseTransmitter(const Interaction& isect,
+	const vec3f& world_V, const vec3f& world_L, float& pdf) {
+	vec3f albedo = isect.material.albedo;
+
+    vec3f N = -isect.shadeNormal;
+	vec3f local_L = ToLocal(world_L, N);
+	vec3f V = world_V;
+	float NdotL = local_L.z;
+	float NdotV = dot(N, V);
+
+	if (NdotL * NdotV >= 0.0f) {
+		return 0.0f;
+	}
+
+	vec3f btdf = albedo * M_1_PIf;
+
+	pdf = CosinePdfHemisphere(abs(NdotL));
+
+	return btdf;
+}
+
+__forceinline__ __device__ vec3f SampleDiffuseTransmitter(const Interaction& isect, Random& random,
+	const vec3f& world_V, vec3f& world_L, float& pdf) {
+	vec3f albedo = isect.material.albedo;
+
+	vec3f local_L = CosineSampleHemisphere(vec2f(random(), random()));
+	vec3f N = -isect.shadeNormal;
+	world_L = ToWorld(local_L, N);
+	vec3f V = world_V;
+	float NdotL = local_L.z;
+	float NdotV = dot(N, V);
+	
+	if (NdotL * NdotV >= 0.0f) {
+		return 0.0f;
+	}
+
+	vec3f btdf = albedo * M_1_PIf;
+
+	pdf = CosinePdfHemisphere(abs(NdotL));
+
+	return btdf;
+}
+//*************************************diffuse transmitter*************************************
+
 //*************************************material*************************************
 __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	const vec3f& world_V, const vec3f& world_L, float& pdf) {
@@ -759,6 +804,9 @@ __forceinline__ __device__ vec3f EvaluateMaterial(const Interaction& isect,
 	}
 	else if (isect.material.type == MaterialType::ClearCoatedConductor) {
 		bsdf = EvaluateClearCoatedConductor(isect, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::DiffuseTransmitter) {
+		bsdf = EvaluateDiffuseTransmitter(isect, world_V, world_L, pdf);
 	}
 
 	return bsdf;
@@ -788,6 +836,9 @@ __forceinline__ __device__ vec3f SampleMaterial(const Interaction& isect, Random
 	}
 	else if (isect.material.type == MaterialType::ClearCoatedConductor) {
 		bsdf = SampleClearCoatedConductor(isect, random, world_V, world_L, pdf);
+	}
+	else if (isect.material.type == MaterialType::DiffuseTransmitter) {
+		bsdf = SampleDiffuseTransmitter(isect, random, world_V, world_L, pdf);
 	}
 
 	return bsdf;
