@@ -298,6 +298,7 @@ extern "C" __global__ void __raygen__renderFrame() {
 
                     radiance += misWeight * history * light_radiance;
                 }
+                
                 break;
             }
             
