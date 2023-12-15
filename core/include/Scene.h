@@ -120,7 +120,7 @@ struct Material {
 struct TriangleMesh {
     TriangleMesh() = default;
 
-    void LoadMesh(const std::string& objFile, const Material& material);
+    void LoadMesh(const std::string& objFile, const Material& material, int in_med = -1, int out_med = -1);
 
     std::vector<vec3f> vertex;
     std::vector<vec3f> normal;

@@ -80,7 +80,7 @@ void Scene::AddEnv(const std::string& fileName) {
 	env = new HdrTexture(fileName);
 }
 
-void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material) {
+void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material, int in_med, int out_med) {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
@@ -92,6 +92,8 @@ void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material
 	}
 
 	this->material = material;
+	this->in_medium = in_med;
+	this->out_medium = out_med;
 
 	// loop over shapes
 	for (size_t s = 0; s < shapes.size(); ++s) {

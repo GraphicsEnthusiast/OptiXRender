@@ -140,7 +140,7 @@ namespace osc {
             textureFile.normalFile = "../../models/02_Body_Normal_DirectX.png";
 
             Material m;
-            m.type = MaterialType::DiffuseTransmitter;
+            m.type = MaterialType::ClearCoatedConductor;
             m.roughness = 0.5f;
             TextureFile t;
 			scene.AddMesh(
