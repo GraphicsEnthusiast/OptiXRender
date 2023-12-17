@@ -29,7 +29,7 @@ __forceinline__ __device__ vec3f EvaluateQuad(const Light& light, const Ray& ray
 	vec3f normal = normalize(cross(light.u, light.v));
 	float cos_theta = dot(ray.direction, normal);
 	if (!light.doubleSide && cos_theta < 0.0f) {
-		pdf = -1.0f;
+		pdf = 0.0f;
 
 		return 0.0f;
 	}
@@ -46,7 +46,7 @@ __forceinline__ __device__ vec3f EvaluateQuad(const Light& light, const Ray& ray
 		return light.radiance;
 	}
 
-	pdf = -1.0f;
+	pdf = 0.0f;
 
 	return 0.0f;
 }
@@ -61,7 +61,7 @@ __forceinline__ __device__ vec3f SampleQuad(const Light& light, const vec3f& hit
 
 	float cos_theta = dot(world_L, normal);
 	if (!light.doubleSide && cos_theta < 0.0f) {
-		pdf = -1.0f;
+		pdf = 0.0f;
 
 		return 0.0f;
 	}
@@ -110,7 +110,7 @@ __forceinline__ __device__ vec3f EvaluateSphere(const Light& light, const Ray& r
 		return light.radiance;
 	}
 
-	pdf = -1.0f;
+	pdf = 0.0f;
 
 	return 0.0f;
 }
@@ -135,7 +135,7 @@ __forceinline__ __device__ vec3f SampleSphere(const Light& light, const vec3f& h
 		return light.radiance;
 	}
 
-	pdf = -1.0f;
+	pdf = 0.0f;
 
 	return 0.0f;
 }
@@ -150,7 +150,7 @@ __forceinline__ __device__ vec3f EvaluateLight(const Light& light, const Ray& ra
 		return EvaluateSphere(light, ray, distance, pdf, light_distance);
 	}
 
-	pdf = -1.0f;
+	pdf = 0.0f;
 	
 	return 0.0f;
 }
@@ -163,7 +163,7 @@ __forceinline__ __device__ vec3f SampleLight(const Light& light, const vec3f& hi
 		return SampleSphere(light, hitpos, sample, world_L, distance, pdf);
 	}
 
-	pdf = -1.0f;
+	pdf = 0.0f;
 
 	return 0.0f;
 }

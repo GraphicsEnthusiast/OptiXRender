@@ -193,8 +193,8 @@ extern "C" __global__ void __raygen__renderFrame() {
             float light_distance = 0.0f;
             vec3f Li = EvaluateLight(light, ray, closest_distance, light_pdf, light_distance);
 
-            // 没有击中光源，pdf = -1.0f
-            if (!IsValid(light_pdf)) {
+            // 没有击中光源，pdf = 0.0f
+            if (light_pdf == 0.0f) {
                 continue;
             }
 
@@ -266,10 +266,6 @@ extern "C" __global__ void __raygen__renderFrame() {
             if (hitLight) {
                 float misWeight = 1.0f;
                 if (bounce != 0) {
-                    if (!IsValid(light_pdf)) {
-                        break;
-                    }
-
                     misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
                 }
                 radiance += misWeight * history * light_radiance;
@@ -289,10 +285,6 @@ extern "C" __global__ void __raygen__renderFrame() {
 
                     float misWeight = 1.0f;
                     if (bounce != 0) {
-                        if (!IsValid(light_pdf)) {
-                            break;
-                        }
-
                         misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
                     }
 
@@ -339,11 +331,6 @@ extern "C" __global__ void __raygen__renderFrame() {
                 if (!lightTrace(shadowRay, tv, t, closest_distance) && prd.lightVisible) {
                     bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
                     float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
-
-                    if (!IsValid(bsdf_pdf) || !IsValid(light_pdf) || !IsValid(costheta)) {
-                        break;
-                    }
-
                     float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
 
                     radiance += misWeight * light_radiance * bsdf * costheta * history / light_pdf;
@@ -384,11 +371,6 @@ extern "C" __global__ void __raygen__renderFrame() {
                 if (!lightTrace(shadowRay, tv, t, closest_distance) && prd.lightVisible) {
                     bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
                     float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
-
-                    if (!IsValid(bsdf_pdf) || !IsValid(light_pdf) || !IsValid(costheta)) {
-                        break;
-                    }
-
                     float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
 
                     radiance += misWeight * light_radiance * bsdf * costheta * history / light_pdf;
@@ -398,10 +380,6 @@ extern "C" __global__ void __raygen__renderFrame() {
             // 采样物体表面材质
             bsdf = SampleMaterial(prd.isect, prd.random, V, L, bsdf_pdf);
             float costheta = abs(dot(prd.isect.shadeNormal, L));
-
-            if (!IsValid(bsdf_pdf) || !IsValid(costheta)) {
-                break;
-            }
 
             history *= bsdf * costheta / bsdf_pdf;
 
@@ -420,6 +398,10 @@ extern "C" __global__ void __raygen__renderFrame() {
             V = -L;
             ray.origin = prd.isect.position;
             ray.direction = L;
+        }
+
+        if (IsNan(radiance)) {
+            break;
         }
 
         // 这一步可以极大的减少白噪点（特别是由点光源产生）, 有偏

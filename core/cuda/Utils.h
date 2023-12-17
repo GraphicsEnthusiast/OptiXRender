@@ -82,14 +82,6 @@ __forceinline__ __device__ bool IsNan(const vec3f& v) {
 	return isnan(v.x) || isnan(v.y) || isnan(v.z);
 }
 
-__forceinline__ __device__ bool IsValid(float value) {
-	if (isnan(value) || value < 0.0f) {
-		return false;
-	}
-
-	return true;
-}
-
 __forceinline__ __device__ vec3f NormalFromTangentToWorld(const vec3f& n, vec3f tangentNormal) {
 	tangentNormal = normalize(tangentNormal * 2.0f - 1.0f);
 
