@@ -16,7 +16,7 @@ struct Camera {
     /*! general up-vector */
     vec3f up;
 
-    int medium = -1;
+    int medium;
 };
 //*************************************camera*************************************
 
@@ -49,9 +49,9 @@ struct Medium {
     MediumType type = MediumType::Homogeneous;
     Phase phase;
 
-    vec3f albedo;
-    vec3f sigma_t;
-    float scale;
+    vec3f albedo = 0.83f;
+    vec3f sigma_t = 6.0f;
+    float scale = 0.2f;
 };
 //*************************************medium*************************************
 
@@ -120,7 +120,7 @@ struct Material {
 struct TriangleMesh {
     TriangleMesh() = default;
 
-    void LoadMesh(const std::string& objFile, const Material& material, int in_med = -1, int out_med = -1);
+    void LoadMesh(const std::string& objFile, const Material& material, int out_med = -1, int in_med = -1);
 
     std::vector<vec3f> vertex;
     std::vector<vec3f> normal;
@@ -129,8 +129,8 @@ struct TriangleMesh {
 
     Material material;
 
-    int in_medium = -1;
-    int out_medium = -1;
+    int in_medium;
+    int out_medium;
 };
 //*************************************triangle mesh*************************************
 
@@ -151,8 +151,7 @@ struct Light {
 
     float radius = 3.0f;
 
-    int in_medium = -1;
-    int out_medium = -1;
+    int medium = -1;
 };
 //*************************************light*************************************
 
@@ -198,7 +197,7 @@ public:
     Scene() = default;
     ~Scene();
 
-    void AddMesh(const std::string& objFile, Material& material, const TextureFile& textureFile);
+    void AddMesh(const std::string& objFile, Material& material, const TextureFile& textureFile, int out_med = -1, int in_med = -1);
     void AddTexture(const std::string& fileName);
     void AddLight(const Light& l);
     void AddMedium(const Medium& m);

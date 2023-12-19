@@ -17,6 +17,7 @@ namespace osc {
             sample(scene)
         {
             sample.SetCamera(camera);
+            camera_medium = camera.medium;
         }
 
         virtual void render() override
@@ -24,7 +25,8 @@ namespace osc {
             if (cameraFrame.modified) {
                 sample.SetCamera(Camera{ cameraFrame.get_from(),
                                          cameraFrame.get_at(),
-                                         cameraFrame.get_up() });
+                                         cameraFrame.get_up(),
+                                         camera_medium});
                 cameraFrame.modified = false;
             }
             sample.Render();
@@ -114,6 +116,7 @@ namespace osc {
         GLuint                fbTexture{ 0 };
         Renderer        sample;
         std::vector<uint32_t> pixels;
+        int camera_medium = -1;
     };
 
 
@@ -123,16 +126,19 @@ namespace osc {
     {
         TextureFile textureFile;
         Material material;
+        Medium m;
         textureFile.albedoFile = "../../models/01_Head_Base_Color.png";
         textureFile.roughnessFile = "../../models/01_Head_Roughness.png";
         textureFile.metallicFile = "../../models/01_Head_Metallic.png";
         textureFile.normalFile = "../../models/01_Head_Normal_DirectX.png";
         try {
             Scene scene;
+            scene.AddMedium(m);
             scene.AddMesh(
                 "../../models/head.obj",
                 material,
-                textureFile
+                textureFile,
+                0
             );
             textureFile.albedoFile = "../../models/02_Body_Base_Color.png";
             textureFile.roughnessFile = "../../models/02_Body_Roughness.png";
@@ -146,7 +152,8 @@ namespace osc {
 			scene.AddMesh(
 				"../../models/body.obj",
 				m,
-				t
+				t,
+                0
 			);
             textureFile.albedoFile = "../../models/03_Base_Base_Color.png";
             textureFile.metallicFile = "../../models/03_Base_Metallic.png";
@@ -155,7 +162,8 @@ namespace osc {
 			scene.AddMesh(
 				"../../models/base.obj",
 				material,
-				textureFile
+				textureFile,
+                0
 			);
             material = Material();
             material.type = MaterialType::Diffuse;
@@ -165,17 +173,21 @@ namespace osc {
 			scene.AddMesh(
 				"../../models/plane.obj",
 				material,
-				textureFile
+				textureFile,
+                0,
+                0
 			);
             //scene.AddEnv("../../models/spaichingen_hill_4k.hdr");
             Camera camera = { /*from*/vec3f(0.2f, 0.2f, 0.2f),
                 /* at */scene.bounds.center(),
-                /* up */vec3f(0.f,1.f,0.f) };
+                /* up */vec3f(0.f,1.f,0.f)};
+            camera.medium = 0;
 
             // something approximating the scale of the world, so the
             // camera knows how much to move for any given user interaction:
             const float worldScale = length(scene.bounds.span());
             Light light;
+            light.medium = 0;
             light.position = vec3f(0.5f, 0.25f, 0.0f);
             light.radius = 0.1f;
             light.radiance = vec3f(15.0f);

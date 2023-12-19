@@ -5,6 +5,7 @@
 #include "Filter.h"
 #include "Light.h"
 #include "Material.h"
+#include "Medium.h"
 #include "Environment.h"
 
 /*! launch parameters in constant memory, filled in by optix upon
@@ -121,10 +122,8 @@ extern "C" __global__ void __closesthit__radiance() {
     prd.isect.distance = length(surfPos - prd.isect.position);
     prd.isect.position = surfPos;
     prd.isect.material = material;
+    prd.isect.mi = MediumInterface(sbtData.in_medium, sbtData.out_medium);
 
-    MediumInterface mi(sbtData.in_medium, sbtData.out_medium);
-    prd.isect.mi = mi;
-    
     if (prd.firstBounce) {
         prd.pixelNormal = Ns;
         prd.pixelAlbedo = material.albedo;
@@ -147,8 +146,11 @@ extern "C" __global__ void __anyhit__shadow() { /*! not going to be used */
 // ------------------------------------------------------------------------------
 
 extern "C" __global__ void __miss__radiance() {
+    const auto& camera = optixLaunchParams.camera;
     PRD& prd = *GetPRD<PRD>();
     prd.isect.distance = FLT_MAX;
+    prd.isect.mi = MediumInterface(camera.medium);
+    prd.isect.frontFace = true;
     if (prd.firstBounce) {
         prd.pixelAlbedo = 0.0f;
         prd.pixelNormal = 0.0f;
@@ -171,6 +173,7 @@ extern "C" __global__ void __raygen__renderFrame() {
     const int iy = optixGetLaunchIndex().y;
     const auto& camera = optixLaunchParams.camera;
     const auto& lights = optixLaunchParams.lights;
+    const auto& mediums = optixLaunchParams.mediums;
 
     PRD prd;
     prd.random.init(ix + optixLaunchParams.frame.size.x * iy,
@@ -186,7 +189,7 @@ extern "C" __global__ void __raygen__renderFrame() {
     vec3f pixelNormal = 0.0f;
     vec3f pixelAlbedo = 0.0f;
 
-    auto lightTrace = [&lights](const Ray& ray, vec3f& light_radiance, float& light_pdf, float& closest_distance) -> bool {
+    auto lightTrace = [&lights](const Ray& ray, Interaction& isect, vec3f& light_radiance, float& light_pdf, float& closest_distance) -> bool {
         bool hitLight = false;
         for (int i = 0; i < lights.lightSize; i++) {
             const Light& light = lights.lightsBuffer[i];
@@ -201,6 +204,7 @@ extern "C" __global__ void __raygen__renderFrame() {
             hitLight = true;
             light_radiance = Li;
             closest_distance = light_distance;
+            isect.mi = MediumInterface(light.medium);
         }
 
         return hitLight;
@@ -232,16 +236,21 @@ extern "C" __global__ void __raygen__renderFrame() {
         vec3f L = ray.direction;
         float light_pdf = 0.0f;
         float bsdf_pdf = 0.0f;
+        float phase_pdf = 0.0f;
         vec3f bsdf = 0.0f;
+        vec3f attenuation = 0.0f;
         vec3f light_radiance = 0.0f;
         float closest_distance = FLT_MAX;
+        vec3f pre_position = camera.position;
+        float pre_pdf = 0.0f;
+        float mult_trans_pdf = 1.0f;
+        float trans_pdf = 1.0f;
+        vec3f transmittance = 0.0f;
 
-        prd.isect.distance = 0.0f;
+        prd.isect.distance = FLT_MAX;
         prd.isect.position = ray.origin;
         prd.firstBounce = true;
-
-        MediumInterface mi(camera.medium);
-        prd.isect.mi = mi;
+        prd.isect.mi = MediumInterface(camera.medium);
 
         for (int bounce = 0; bounce < optixLaunchParams.maxBounce; bounce++) {
             //*************************场景中的物体以及灯光求交*************************
@@ -259,137 +268,222 @@ extern "C" __global__ void __raygen__renderFrame() {
                 RADIANCE_RAY_TYPE,            // missSBTIndex 
                 u0, u1);
             closest_distance = prd.isect.distance;
-            bool hitLight = lightTrace(ray, light_radiance, light_pdf, closest_distance);
+            bool hitLight = lightTrace(ray, prd.isect, light_radiance, light_pdf, closest_distance);
             //*************************场景中的物体以及灯光求交*************************
 
-            // 处理光源
-            if (hitLight) {
-                float misWeight = 1.0f;
-                if (bounce != 0) {
-                    misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
+            bool scattered = false;
+            int medium_index = -1;
+            if (mediums.mediumSize != 0) {
+                medium_index = prd.isect.mi.GetMedium(hitLight ? true : prd.isect.frontFace);
+                float distance = 0.0f;
+
+                // 处理介质
+                if (medium_index != -1) {
+                    const auto& medium = mediums.mediumsBuffer[medium_index];
+                    scattered = SampleMediumDistance(medium, closest_distance, distance, trans_pdf, transmittance, prd.random);
+                    history *= (transmittance / trans_pdf);
+                    mult_trans_pdf *= trans_pdf;
+
+                    if (scattered) {
+                        prd.isect.position = pre_position + distance * L;
+                        prd.isect.distance = distance;
+
+                        // 采样直接光照
+                        if (lights.lightSize != 0) {
+                            prd.lightVisible = false;
+                            // uniform sample one light
+                            int index = clamp(int(lights.lightSize * prd.random()), 0, lights.lightSize - 1);
+                            const Light& light = lights.lightsBuffer[index];
+                            float light_distance = 0.0f;
+
+                            Ray shadowRay;
+                            shadowRay.origin = prd.isect.position;
+                            light_radiance = SampleLight(light, shadowRay.origin, vec2f(prd.random(), prd.random()), shadowRay.direction, light_distance, light_pdf);
+                            light_radiance *= lights.lightSize;
+                            optixTrace(optixLaunchParams.traversable,
+                                shadowRay.origin,
+                                shadowRay.direction,
+                                EPS,                   // tmin
+                                light_distance - EPS,  // tmax
+                                0.0f,                  // rayTime
+                                OptixVisibilityMask(255),
+                                // For shadow rays: skip any/closest hit shaders and terminate on first
+                                // intersection with anything. The miss shader is used to mark if the
+                                // light was visible.
+                                OPTIX_RAY_FLAG_DISABLE_ANYHIT
+                                | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
+                                | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
+                                SHADOW_RAY_TYPE,            // SBT offset
+                                RAY_TYPE_COUNT,             // SBT stride
+                                SHADOW_RAY_TYPE,            // missSBTIndex 
+                                u0, u1);
+
+                            vec3f tv; float t; Interaction ti;
+                            closest_distance = light_distance - EPS;
+                            if (!lightTrace(shadowRay, ti, tv, t, closest_distance) && prd.lightVisible) {
+                                transmittance = EvaluateMediumDistance(medium, false, closest_distance, trans_pdf);
+                                attenuation = EvaluatePhase(medium, prd.isect, V, shadowRay.direction, phase_pdf);
+
+                                float misWeight = PowerHeuristic(light_pdf, phase_pdf * trans_pdf, 2);
+
+                                radiance += misWeight * (transmittance / trans_pdf) *  light_radiance * attenuation * history / light_pdf;
+                            }
+                        }
+
+                        attenuation = SamplePhase(medium, prd.isect, prd.random, V, L, phase_pdf);
+                        history *= (attenuation / phase_pdf);
+                        pre_pdf = phase_pdf;
+                    }
                 }
-                radiance += misWeight * history * light_radiance;
-
-                break;
             }
-            
-            // 处理环境
-            bool notHit = prd.isect.distance == FLT_MAX;
-            if (notHit) {
-                if (optixLaunchParams.environment.hasEnv) {
-                    int width = optixLaunchParams.environment.width;
-                    int height = optixLaunchParams.environment.height;
-                    vec2f uv = EvaluateEnvironment(width, height, light_pdf, ray.direction);
-                    light_radiance = (vec3f)tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
-                    light_pdf *= tex2D<float4>(optixLaunchParams.environment.envCache, uv.x, uv.y).z;
 
+            if (!scattered) {
+                // 处理光源
+                if (hitLight) {
                     float misWeight = 1.0f;
                     if (bounce != 0) {
-                        misWeight = PowerHeuristic(bsdf_pdf, light_pdf, 2);
+                        pre_pdf *= mult_trans_pdf;
+                        misWeight = PowerHeuristic(pre_pdf, light_pdf, 2);
+                    }
+                    radiance += misWeight * history * light_radiance;
+
+                    break;
+                }
+
+                // 处理环境
+                bool notHit = closest_distance == FLT_MAX;
+                if (notHit && medium_index == -1) {
+                    if (optixLaunchParams.environment.hasEnv) {
+                        int width = optixLaunchParams.environment.width;
+                        int height = optixLaunchParams.environment.height;
+                        vec2f uv = EvaluateEnvironment(width, height, light_pdf, ray.direction);
+                        light_radiance = (vec3f)tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
+                        light_pdf *= tex2D<float4>(optixLaunchParams.environment.envCache, uv.x, uv.y).z;
+
+                        float misWeight = 1.0f;
+                        if (bounce != 0) {
+                            pre_pdf *= mult_trans_pdf;
+                            misWeight = PowerHeuristic(pre_pdf, light_pdf, 2);
+                        }
+
+                        radiance += misWeight * history * light_radiance;
                     }
 
-                    radiance += misWeight * history * light_radiance;
+                    break;
                 }
-                
-                break;
-            }
-            
-            // 采样直接光照
-            if (optixLaunchParams.environment.hasEnv) {
-                prd.lightVisible = false;
-                
-                int width = optixLaunchParams.environment.width;
-                int height = optixLaunchParams.environment.height;
-                vec4f uv_t = tex2D<float4>(optixLaunchParams.environment.envCache, prd.random(), prd.random());
-                vec2f uv(uv_t.x, uv_t.y);
 
-                Ray shadowRay;
-                shadowRay.origin = prd.isect.position;
-                SampleEnvironment(width, height, light_pdf, shadowRay.direction, uv);
-                light_pdf *= tex2D<float4>(optixLaunchParams.environment.envCache, uv.x, uv.y).z;
-                light_radiance = (vec3f)tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
-                optixTrace(optixLaunchParams.traversable,
-                    shadowRay.origin,
-                    shadowRay.direction,
-                    EPS,      // tmin
-                    FLT_MAX,  // tmax
-                    0.0f,     // rayTime
-                    OptixVisibilityMask(255),
-                    // For shadow rays: skip any/closest hit shaders and terminate on first
-                    // intersection with anything. The miss shader is used to mark if the
-                    // light was visible.
-                    OPTIX_RAY_FLAG_DISABLE_ANYHIT
-                    | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
-                    | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
-                    SHADOW_RAY_TYPE,            // SBT offset
-                    RAY_TYPE_COUNT,             // SBT stride
-                    SHADOW_RAY_TYPE,            // missSBTIndex 
-                    u0, u1);
+                // 采样直接光照
+                if (optixLaunchParams.environment.hasEnv) {
+                    prd.lightVisible = false;
 
-                vec3f tv; float t;
-                closest_distance = FLT_MAX;
-                if (!lightTrace(shadowRay, tv, t, closest_distance) && prd.lightVisible) {
-                    bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
-                    float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
-                    float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
+                    int width = optixLaunchParams.environment.width;
+                    int height = optixLaunchParams.environment.height;
+                    vec4f uv_t = tex2D<float4>(optixLaunchParams.environment.envCache, prd.random(), prd.random());
+                    vec2f uv(uv_t.x, uv_t.y);
 
-                    radiance += misWeight * light_radiance * bsdf * costheta * history / light_pdf;
+                    Ray shadowRay;
+                    shadowRay.origin = prd.isect.position;
+                    SampleEnvironment(width, height, light_pdf, shadowRay.direction, uv);
+                    light_pdf *= tex2D<float4>(optixLaunchParams.environment.envCache, uv.x, uv.y).z;
+                    light_radiance = (vec3f)tex2D<float4>(optixLaunchParams.environment.envMap, uv.x, uv.y);
+                    optixTrace(optixLaunchParams.traversable,
+                        shadowRay.origin,
+                        shadowRay.direction,
+                        EPS,      // tmin
+                        FLT_MAX,  // tmax
+                        0.0f,     // rayTime
+                        OptixVisibilityMask(255),
+                        // For shadow rays: skip any/closest hit shaders and terminate on first
+                        // intersection with anything. The miss shader is used to mark if the
+                        // light was visible.
+                        OPTIX_RAY_FLAG_DISABLE_ANYHIT
+                        | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
+                        | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
+                        SHADOW_RAY_TYPE,            // SBT offset
+                        RAY_TYPE_COUNT,             // SBT stride
+                        SHADOW_RAY_TYPE,            // missSBTIndex 
+                        u0, u1);
+
+                    vec3f tv; float t;  Interaction ti;
+                    closest_distance = FLT_MAX;
+                    if (!lightTrace(shadowRay, ti, tv, t, closest_distance) && prd.lightVisible) {
+                        bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
+                        float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
+                        float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
+
+                        vec3f t_history = 1.0f;
+                        if (medium_index != -1) {
+                            const auto& medium = mediums.mediumsBuffer[medium_index];
+                            transmittance = EvaluateMediumDistance(medium, false, closest_distance, trans_pdf);
+                            t_history = (transmittance / trans_pdf);
+                            misWeight = PowerHeuristic(light_pdf, bsdf_pdf * trans_pdf, 2);
+                        }
+
+                        radiance += misWeight * t_history * light_radiance * bsdf * costheta * history / light_pdf;
+                    }
                 }
-            }
 
-            if (lights.lightSize != 0) {
-                prd.lightVisible = false;
-                // uniform sample one light
-                int index = clamp(int(lights.lightSize * prd.random()), 0, lights.lightSize - 1);
-                const Light& light = lights.lightsBuffer[index];
-                float light_distance = 0.0f;
+                if (lights.lightSize != 0) {
+                    prd.lightVisible = false;
+                    // uniform sample one light
+                    int index = clamp(int(lights.lightSize * prd.random()), 0, lights.lightSize - 1);
+                    const Light& light = lights.lightsBuffer[index];
+                    float light_distance = 0.0f;
 
-                Ray shadowRay;
-                shadowRay.origin = prd.isect.position;
-                light_radiance = SampleLight(light, shadowRay.origin, vec2f(prd.random(), prd.random()), shadowRay.direction, light_distance, light_pdf);
-                light_radiance *= lights.lightSize;
-                optixTrace(optixLaunchParams.traversable,
-                    shadowRay.origin,
-                    shadowRay.direction,
-                    EPS,                   // tmin
-                    light_distance - EPS,  // tmax
-                    0.0f,                  // rayTime
-                    OptixVisibilityMask(255),
-                    // For shadow rays: skip any/closest hit shaders and terminate on first
-                    // intersection with anything. The miss shader is used to mark if the
-                    // light was visible.
-                    OPTIX_RAY_FLAG_DISABLE_ANYHIT
-                    | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
-                    | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
-                    SHADOW_RAY_TYPE,            // SBT offset
-                    RAY_TYPE_COUNT,             // SBT stride
-                    SHADOW_RAY_TYPE,            // missSBTIndex 
-                    u0, u1);
+                    Ray shadowRay;
+                    shadowRay.origin = prd.isect.position;
+                    light_radiance = SampleLight(light, shadowRay.origin, vec2f(prd.random(), prd.random()), shadowRay.direction, light_distance, light_pdf);
+                    light_radiance *= lights.lightSize;
+                    optixTrace(optixLaunchParams.traversable,
+                        shadowRay.origin,
+                        shadowRay.direction,
+                        EPS,                   // tmin
+                        light_distance - EPS,  // tmax
+                        0.0f,                  // rayTime
+                        OptixVisibilityMask(255),
+                        // For shadow rays: skip any/closest hit shaders and terminate on first
+                        // intersection with anything. The miss shader is used to mark if the
+                        // light was visible.
+                        OPTIX_RAY_FLAG_DISABLE_ANYHIT
+                        | OPTIX_RAY_FLAG_TERMINATE_ON_FIRST_HIT
+                        | OPTIX_RAY_FLAG_DISABLE_CLOSESTHIT,
+                        SHADOW_RAY_TYPE,            // SBT offset
+                        RAY_TYPE_COUNT,             // SBT stride
+                        SHADOW_RAY_TYPE,            // missSBTIndex 
+                        u0, u1);
 
-                vec3f tv; float t;
-                closest_distance = light_distance - EPS;
-                if (!lightTrace(shadowRay, tv, t, closest_distance) && prd.lightVisible) {
-                    bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
-                    float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
-                    float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
+                    vec3f tv; float t; Interaction ti;
+                    closest_distance = light_distance - EPS;
+                    if (!lightTrace(shadowRay, ti, tv, t, closest_distance) && prd.lightVisible) {
+                        bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
+                        float costheta = abs(dot(prd.isect.shadeNormal, shadowRay.direction));
+                        float misWeight = PowerHeuristic(light_pdf, bsdf_pdf, 2);
+                        vec3f t_history = 1.0f;
+                        if (medium_index != -1) {
+                            const auto& medium = mediums.mediumsBuffer[medium_index];
+                            transmittance = EvaluateMediumDistance(medium, false, closest_distance, trans_pdf);
+                            t_history = (transmittance / trans_pdf);
+                            misWeight = PowerHeuristic(light_pdf, bsdf_pdf * trans_pdf, 2);
+                        }
 
-                    radiance += misWeight * light_radiance * bsdf * costheta * history / light_pdf;
+                        radiance += misWeight * t_history * light_radiance * bsdf * costheta * history / light_pdf;
+                    }
                 }
+
+                // 采样物体表面材质
+                bsdf = SampleMaterial(prd.isect, prd.random, V, L, bsdf_pdf);
+                float costheta = abs(dot(prd.isect.shadeNormal, L));
+                history *= (bsdf * costheta / bsdf_pdf);
+                pre_pdf = bsdf_pdf;
             }
-
-            // 采样物体表面材质
-            bsdf = SampleMaterial(prd.isect, prd.random, V, L, bsdf_pdf);
-            float costheta = abs(dot(prd.isect.shadeNormal, L));
-
-            history *= bsdf * costheta / bsdf_pdf;
 
             // 俄罗斯轮盘赌
-            float prr = min((history.x + history.y + history.z) / 3.0f, 1.0f);
+            float prr = min((history.x + history.y + history.z) / 3.0f, 0.95f);
             if (prd.random() > prr) {
                 break;
             }
             history /= prr;
-            
+
             if (IsNan(history)) {
                 break;
             }
@@ -398,6 +492,8 @@ extern "C" __global__ void __raygen__renderFrame() {
             V = -L;
             ray.origin = prd.isect.position;
             ray.direction = L;
+            mult_trans_pdf = 1.0f;
+            pre_position = prd.isect.position;
         }
 
         if (IsNan(radiance)) {
@@ -405,14 +501,14 @@ extern "C" __global__ void __raygen__renderFrame() {
         }
 
         // 这一步可以极大的减少白噪点（特别是由点光源产生）, 有偏
- 		int lightNum = lights.lightSize;
- 		if (optixLaunchParams.environment.hasEnv) {
- 			lightNum++;
- 		}
- 		float illum = dot(radiance, vec3f(0.2126f, 0.7152f, 0.072f));
-		if (illum > lightNum) {
- 			radiance *= lightNum / illum;
- 		}
+//        int lightNum = lights.lightSize;
+//        if (optixLaunchParams.environment.hasEnv) {
+//            lightNum++;
+//        }
+//        float illum = dot(radiance, vec3f(0.2126f, 0.7152f, 0.072f));
+//        if (illum > lightNum) {
+//            radiance *= lightNum / illum;
+//        }
 
         pixelColor += radiance;
         pixelAlbedo += prd.pixelAlbedo;

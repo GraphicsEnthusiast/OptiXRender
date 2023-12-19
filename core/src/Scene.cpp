@@ -19,7 +19,7 @@ Scene::~Scene() {
 	}
 }
 
-void Scene::AddMesh(const std::string& objFile, Material& material, const TextureFile& textureFile) {
+void Scene::AddMesh(const std::string& objFile, Material& material, const TextureFile& textureFile, int out_med, int in_med) {
 	TriangleMesh* mesh = new TriangleMesh();
 
 	if (textureFile.albedoFile != "") {
@@ -55,7 +55,7 @@ void Scene::AddMesh(const std::string& objFile, Material& material, const Textur
 		AddTexture(textureFile.normalFile);
 	}
 
-	mesh->LoadMesh(objFile, material);
+	mesh->LoadMesh(objFile, material, out_med, in_med);
 	this->meshes.emplace_back(mesh);
 
 	for (auto vtx : mesh->vertex) {
@@ -80,7 +80,7 @@ void Scene::AddEnv(const std::string& fileName) {
 	env = new HdrTexture(fileName);
 }
 
-void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material, int in_med, int out_med) {
+void TriangleMesh::LoadMesh(const std::string& objFile, const Material& material, int out_med, int in_med) {
 	tinyobj::attrib_t attrib;
 	std::vector<tinyobj::shape_t> shapes;
 	std::vector<tinyobj::material_t> materials;
