@@ -127,6 +127,10 @@ namespace osc {
         TextureFile textureFile;
         Material material;
         Medium m;
+        Medium m2;
+        m2.sigma_t = vec3f(0.1486f, 0.321f, 0.736f);
+        m2.albedo = 0.0f;
+        m2.scale = 0.5f;
         textureFile.albedoFile = "../../models/01_Head_Base_Color.png";
         textureFile.roughnessFile = "../../models/01_Head_Roughness.png";
         textureFile.metallicFile = "../../models/01_Head_Metallic.png";
@@ -134,11 +138,12 @@ namespace osc {
         try {
             Scene scene;
             scene.AddMedium(m);
+            scene.AddMedium(m2);
             scene.AddMesh(
                 "../../models/head.obj",
                 material,
                 textureFile,
-                0
+                0, -1
             );
             textureFile.albedoFile = "../../models/02_Body_Base_Color.png";
             textureFile.roughnessFile = "../../models/02_Body_Roughness.png";
@@ -146,14 +151,14 @@ namespace osc {
             textureFile.normalFile = "../../models/02_Body_Normal_DirectX.png";
 
             Material m;
-            m.type = MaterialType::ClearCoatedConductor;
-            m.roughness = 0.5f;
+            m.type = MaterialType::ThinDielectric;
+            //m.roughness = 0.5f;
             TextureFile t;
 			scene.AddMesh(
 				"../../models/body.obj",
 				m,
 				t,
-                0
+                0, 1
 			);
             textureFile.albedoFile = "../../models/03_Base_Base_Color.png";
             textureFile.metallicFile = "../../models/03_Base_Metallic.png";
@@ -163,7 +168,7 @@ namespace osc {
 				"../../models/base.obj",
 				material,
 				textureFile,
-                0
+                0, -1
 			);
             material = Material();
             material.type = MaterialType::Diffuse;
@@ -174,8 +179,7 @@ namespace osc {
 				"../../models/plane.obj",
 				material,
 				textureFile,
-                0,
-                0
+                0, 0
 			);
             //scene.AddEnv("../../models/spaichingen_hill_4k.hdr");
             Camera camera = { /*from*/vec3f(0.2f, 0.2f, 0.2f),

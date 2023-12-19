@@ -21,8 +21,8 @@ struct TriangleMeshSBTData {
 
 	Material material;
 
-	int in_medium = -1;
-    int out_medium = -1;
+	int in_medium;
+    int out_medium;
 };
 
 struct LaunchParams {

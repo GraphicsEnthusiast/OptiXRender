@@ -51,7 +51,7 @@ struct Medium {
 
     vec3f albedo = 0.83f;
     vec3f sigma_t = 6.0f;
-    float scale = 0.2f;
+    float scale = 0.15f;
 };
 //*************************************medium*************************************
 
@@ -120,7 +120,7 @@ struct Material {
 struct TriangleMesh {
     TriangleMesh() = default;
 
-    void LoadMesh(const std::string& objFile, const Material& material, int out_med = -1, int in_med = -1);
+    void LoadMesh(const std::string& objFile, const Material& material, int out_med, int in_med);
 
     std::vector<vec3f> vertex;
     std::vector<vec3f> normal;

@@ -116,7 +116,7 @@ __forceinline__ __device__ vec3f EvaluateHomogeneousDistance(const Medium& mediu
     vec3f sigma_a = sigma_t - sigma_s;
     sigma_a *= medium.scale;
     sigma_s *= medium.scale;
-    sigma_t = sigma_s / albedo;
+    sigma_t *= medium.scale;
     float medium_sampling_weight = 0.0f;
     for (int dim = 0; dim < 3; ++dim) {
 		if (albedo[dim] > medium_sampling_weight && sigma_t[dim] != 0.0f) {
@@ -168,7 +168,7 @@ __forceinline__ __device__ bool SampleHomogeneousDistance(const Medium& medium, 
     vec3f sigma_a = sigma_t - sigma_s;
     sigma_a *= medium.scale;
     sigma_s *= medium.scale;
-    sigma_t = sigma_s / albedo;
+    sigma_t *= medium.scale;
     float medium_sampling_weight = 0.0f;
     for (int dim = 0; dim < 3; ++dim) {
 		if (albedo[dim] > medium_sampling_weight && sigma_t[dim] != 0.0f) {
