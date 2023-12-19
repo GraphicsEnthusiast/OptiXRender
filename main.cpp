@@ -203,7 +203,7 @@ namespace osc {
             light.radiance = vec3f(15.0f, 0.0f, 0.0f);
             scene.AddLight(light);
 
-            SampleWindow* window = new SampleWindow("RTRT_Render",
+            SampleWindow* window = new SampleWindow("RTX_Render",
                 &scene, camera, worldScale);
             //      window->enableFlyMode();
             window->enableInspectMode();
