@@ -110,13 +110,10 @@ __forceinline__ __device__ vec3f SamplePhase(const Medium& medium, const Interac
 
 //*************************************homogeneous medium*************************************
 __forceinline__ __device__ vec3f EvaluateHomogeneousDistance(const Medium& medium, bool scattered, float distance, float& trans_pdf) {
-    vec3f albedo = medium.albedo;
-    vec3f sigma_t = medium.sigma_t;
-    vec3f sigma_s = albedo * sigma_t;
-    vec3f sigma_a = sigma_t - sigma_s;
-    sigma_a *= medium.scale;
-    sigma_s *= medium.scale;
-    sigma_t *= medium.scale;
+    vec3f sigma_s = medium.sigma_s * medium.scale;
+    vec3f sigma_a = medium.sigma_a * medium.scale;
+    vec3f sigma_t = sigma_a + sigma_s;
+    vec3f albedo = sigma_s / sigma_t;
     float medium_sampling_weight = 0.0f;
     for (int dim = 0; dim < 3; ++dim) {
 		if (albedo[dim] > medium_sampling_weight && sigma_t[dim] != 0.0f) {
@@ -162,13 +159,10 @@ __forceinline__ __device__ vec3f EvaluateHomogeneousDistance(const Medium& mediu
 
 __forceinline__ __device__ bool SampleHomogeneousDistance(const Medium& medium, float max_distance, float& distance, 
     float& trans_pdf, vec3f& transmittance, Random& random) {
-    vec3f albedo = medium.albedo;
-    vec3f sigma_t = medium.sigma_t;
-    vec3f sigma_s = albedo * sigma_t;
-    vec3f sigma_a = sigma_t - sigma_s;
-    sigma_a *= medium.scale;
-    sigma_s *= medium.scale;
-    sigma_t *= medium.scale;
+    vec3f sigma_s = medium.sigma_s * medium.scale;
+    vec3f sigma_a = medium.sigma_a * medium.scale;
+    vec3f sigma_t = sigma_a + sigma_s;
+    vec3f albedo = sigma_s / sigma_t;
     float medium_sampling_weight = 0.0f;
     for (int dim = 0; dim < 3; ++dim) {
 		if (albedo[dim] > medium_sampling_weight && sigma_t[dim] != 0.0f) {
