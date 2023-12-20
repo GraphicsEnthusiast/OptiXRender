@@ -127,10 +127,6 @@ namespace osc {
         TextureFile textureFile;
         Material material;
         Medium m;
-        Medium m2;
-        m2.sigma_a = vec3f(0.1486f, 0.321f, 0.736f);
-        m2.sigma_s = 0.0f;
-        m2.scale = 5.5f;
         textureFile.albedoFile = "../../models/01_Head_Base_Color.png";
         textureFile.roughnessFile = "../../models/01_Head_Roughness.png";
         textureFile.metallicFile = "../../models/01_Head_Metallic.png";
@@ -138,7 +134,6 @@ namespace osc {
         try {
             Scene scene;
             scene.AddMedium(m);
-            scene.AddMedium(m2);
             scene.AddMesh(
                 "../../models/head.obj",
                 material,

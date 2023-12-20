@@ -49,9 +49,9 @@ struct Medium {
     MediumType type = MediumType::Homogeneous;
     Phase phase;
 
-    vec3f sigma_a = 1.0f;
-    vec3f sigma_s = 5.0f;
-    float scale = 100.0f;
+    vec3f sigma_s = vec3f(0.74f, 0.88f, 1.01f);
+    vec3f sigma_a = vec3f(0.032f, 0.17f, 0.48f);
+    float scale = 500.0f;
 };
 //*************************************medium*************************************
 
