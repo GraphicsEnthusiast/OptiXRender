@@ -51,7 +51,7 @@ struct Medium {
 
     vec3f sigma_a = 1.0f;
     vec3f sigma_s = 5.0f;
-    float scale = 25.0f;
+    float scale = 100.0f;
 };
 //*************************************medium*************************************
 
