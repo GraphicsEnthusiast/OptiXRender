@@ -404,7 +404,7 @@ extern "C" __global__ void __raygen__renderFrame() {
                         SHADOW_RAY_TYPE,            // missSBTIndex 
                         u0, u1);
 
-                    vec3f tv; float t;  Interaction ti;
+                    vec3f tv; float t; Interaction ti;
                     closest_distance = FLT_MAX;
                     if (!lightTrace(shadowRay, ti, tv, t, closest_distance) && prd.lightVisible) {
                         bsdf = EvaluateMaterial(prd.isect, V, shadowRay.direction, bsdf_pdf);
