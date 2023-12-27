@@ -150,12 +150,12 @@ __forceinline__ __device__ float DistributionGGX(const vec3f& H, const vec3f& N,
 		tan_theta_2 = (1.0f - cos_theta_2) / cos_theta_2,
 		alpha_2 = alpha_u * alpha_v;
 	if (alpha_u == alpha_v) {
-		return alpha_2 / (M_PIf * pow(cos_theta, 3.0f) * sqr(alpha_2 + tan_theta_2));
+		return alpha_2 / (M_PIf * pow(cos_theta, 2.0f) * sqr(alpha_2 + tan_theta_2));
 	}
 	else {
 		vec3f dir = ToLocal(H, N);
 
-		return cos_theta / (M_PIf * alpha_2 * sqr(sqr(dir.x / alpha_u) + sqr(dir.y / alpha_v) + sqr(dir.z)));
+		return 1.0f / (M_PIf * alpha_2 * sqr(sqr(dir.x / alpha_u) + sqr(dir.y / alpha_v) + sqr(dir.z)));
 	}
 }
 
