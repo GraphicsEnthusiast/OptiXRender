@@ -4,8 +4,6 @@
 #include "glfWindow/GLFWindow.h"
 #include <GL/gl.h>
 
-using namespace osc;
-
 struct MyWindow : public GLFCameraWindow {
 	MyWindow(const std::string& title, const Scene* scene, const Camera& camera, const float worldScale)
 		: GLFCameraWindow(title, camera.from, camera.at, camera.up, worldScale),
