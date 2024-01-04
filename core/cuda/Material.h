@@ -199,7 +199,7 @@ __forceinline__ __device__ vec3f EvaluateDielectric(const Interaction& isect,
 		pdf = (1.0f - F) * Dv * dwh_dwi;
 
 		bsdf = albedo * (1.0f - F) * D * G * factor / sqr(sqrtDenom);
-		bsdf *= sqr(etai_over_etat);
+		bsdf *= sqr(1.0f / etai_over_etat);
 	}
 
 	return bsdf;
@@ -262,7 +262,7 @@ __forceinline__ __device__ vec3f SampleDielectric(const Interaction& isect, Rand
 		pdf = (1.0f - F) * Dv * dwh_dwi;
 
 		bsdf = albedo * (1.0f - F) * D * G * factor / sqr(sqrtDenom);
-		bsdf *= sqr(etai_over_etat);
+		bsdf *= sqr(1.0f / etai_over_etat);
 	}
 
 	return bsdf;

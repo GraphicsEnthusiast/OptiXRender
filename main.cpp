@@ -211,7 +211,7 @@ extern "C" int main(int ac, char** av) {
 		textureFile.normalFile = "../../models/02_Body_Normal_DirectX.png";
 
 		Material m;
-		m.type = MaterialType::ThinDielectric;
+		m.type = MaterialType::Dielectric;
 		//m.roughness = 0.5f;
 		TextureFile t;
 		scene.AddMesh(
@@ -241,7 +241,7 @@ extern "C" int main(int ac, char** av) {
 			textureFile,
 			-1, -1
 		);
-		//scene.AddEnv("../../models/spaichingen_hill_4k.hdr");
+		scene.AddEnv("../../models/spaichingen_hill_4k.hdr");
 		Camera camera = { /*from*/vec3f(0.2f, 0.2f, 0.2f),
 			/* at */scene.bounds.center(),
 			/* up */vec3f(0.f,1.f,0.f) };
@@ -255,17 +255,17 @@ extern "C" int main(int ac, char** av) {
 		light.position = vec3f(0.5f, 0.25f, 0.0f);
 		light.radius = 0.1f;
 		light.radiance = vec3f(15.0f);
-		scene.AddLight(light);
+		//scene.AddLight(light);
 
 		light.position = vec3f(1.0f, 0.5f, 0.0f);
 		light.radius = 0.08f;
 		light.radiance = vec3f(0.0f, 15.0f, 0.0f);
-		scene.AddLight(light);
+		//scene.AddLight(light);
 
 		light.position = vec3f(-0.5f, 0.25f, 0.0f);
 		light.radius = 0.1f;
 		light.radiance = vec3f(15.0f, 0.0f, 0.0f);
-		scene.AddLight(light);
+		//scene.AddLight(light);
 
 		MyWindow* window = new MyWindow("RTX_Render",
 			&scene, camera, worldScale);
