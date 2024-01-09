@@ -267,7 +267,7 @@ extern "C" int main(int ac, char** av) {
 		light.radiance = vec3f(15.0f, 0.0f, 0.0f);
 		//scene.AddLight(light);
 
-		MyWindow* window = new MyWindow("RTX_Render",
+		MyWindow* window = new MyWindow("OptiXRender",
 			&scene, camera, worldScale);
 		//      window->enableFlyMode();
 		window->enableInspectMode();

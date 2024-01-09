@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project("RTX_Render")
+project("OptiXRender")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -55,17 +55,17 @@ cuda_compile_and_embed(embedded_ptx_code core/cuda/devicePrograms.cu)
 cuda_add_library(PostProcessing
   core/cuda/PostProcessing.cu)
 
-add_executable(RTX_Render
+add_executable(OptiXRender
   ${embedded_ptx_code}
   main.cpp
 )
 
-target_include_directories(RTX_Render PUBLIC
+target_include_directories(OptiXRender PUBLIC
   core/include
   common/
 )
 
-target_link_libraries(RTX_Render
+target_link_libraries(OptiXRender
   core
   gdt
   # optix dependencies, for rendering
