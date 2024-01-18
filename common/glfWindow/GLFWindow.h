@@ -59,6 +59,7 @@ struct GLFWindow {
     /*! the glfw window handle */
     GLFWwindow* handle{ nullptr };
     ImGuiIO* io;
+    bool change_camera;
 };
 
 
@@ -527,15 +528,38 @@ static void glfwindow_mouseMotion_cb(GLFWwindow* window, double x, double y)
 {
 	GLFWindow* gw = static_cast<GLFWindow*>(glfwGetWindowUserPointer(window));
 	assert(gw);
-	gw->mouseMotion(vec2i((int)x, (int)y));
+	
+    int32_t leftCornerPosX, leftCornerPosY;
+    glfwGetWindowPos(gw->handle, &leftCornerPosX, &leftCornerPosY);
+    double newX = x + leftCornerPosX;
+    double newY = y + leftCornerPosY;
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.AddMousePosEvent(newX, newY);
+	if (gw->change_camera) {
+        gw->mouseMotion(vec2i((int)x, (int)y));
+	}
+//     if (!io.WantCaptureMouse)
+//     {
+//         gw->mouseMotion(vec2i((int)x, (int)y));
+//         
+//     }
 }
 
 /*! callback for pressing _or_ releasing a mouse button*/
 static void glfwindow_mouseButton_cb(GLFWwindow* window, int button, int action, int mods)
 {
+	ImGuiIO& io = ImGui::GetIO();
+	io.AddMouseButtonEvent(button, action);
 	GLFWindow* gw = static_cast<GLFWindow*>(glfwGetWindowUserPointer(window));
 	assert(gw);
-	// double x, y;
-	// glfwGetCursorPos(window,&x,&y);
-	gw->mouseButton(button, action, mods);
+    if (gw->change_camera) {
+        gw->mouseButton(button, action, mods);
+    }
+//     if (!io.WantCaptureMouse)
+//     {
+// 		// double x, y;
+// 	    // glfwGetCursorPos(window,&x,&y);
+// 		gw->mouseButton(button, action, mods);
+//     }    
 }

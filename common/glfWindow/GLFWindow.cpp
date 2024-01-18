@@ -48,7 +48,7 @@ GLFWindow::GLFWindow(const std::string& title)
 	io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 	io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
 	io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-	io->ConfigViewportsNoAutoMerge = true;
+	//io->ConfigViewportsNoAutoMerge = true;
 	//io->ConfigViewportsNoTaskBarIcon = true;
 
 	// Setup Dear ImGui style
@@ -74,7 +74,6 @@ void GLFWindow::run()
 	glfwGetFramebufferSize(handle, &width, &height);
 	resize(vec2i(width, height));
 
-	// glfwSetWindowUserPointer(window, GLFWindow::current);
 	glfwSetFramebufferSizeCallback(handle, glfwindow_reshape_cb);
 	glfwSetMouseButtonCallback(handle, glfwindow_mouseButton_cb);
 	glfwSetKeyCallback(handle, glfwindow_key_cb);
@@ -87,6 +86,9 @@ void GLFWindow::run()
 
 	while (!glfwWindowShouldClose(handle)) {
 		glfwPollEvents();
+
+		render();
+		draw();
 
 		// Start the Dear ImGui frame
 		ImGui_ImplOpenGL2_NewFrame();
@@ -132,9 +134,6 @@ void GLFWindow::run()
 
 		// Rendering
 		ImGui::Render();
-
-		render();
-		draw();
 
 		ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 
