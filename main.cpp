@@ -49,25 +49,25 @@ struct MyWindow : public GLFCameraWindow {
 
 		glViewport(0, 0, fbSize.x, fbSize.y);
 
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glOrtho(0.f, (float)fbSize.x, 0.f, (float)fbSize.y, -1.f, 1.f);
-
-		glBegin(GL_QUADS);
-		{
-			glTexCoord2f(0.f, 0.f);
-			glVertex3f(0.f, 0.f, 0.f);
-
-			glTexCoord2f(0.f, 1.f);
-			glVertex3f(0.f, (float)fbSize.y, 0.f);
-
-			glTexCoord2f(1.f, 1.f);
-			glVertex3f((float)fbSize.x, (float)fbSize.y, 0.f);
-
-			glTexCoord2f(1.f, 0.f);
-			glVertex3f((float)fbSize.x, 0.f, 0.f);
-		}
-		glEnd();
+// 		glMatrixMode(GL_PROJECTION);
+// 		glLoadIdentity();
+// 		glOrtho(0.f, (float)fbSize.x, 0.f, (float)fbSize.y, -1.f, 1.f);
+// 
+// 		glBegin(GL_QUADS);
+// 		{
+// 			glTexCoord2f(0.f, 0.f);
+// 			glVertex3f(0.f, 0.f, 0.f);
+// 
+// 			glTexCoord2f(0.f, 1.f);
+// 			glVertex3f(0.f, (float)fbSize.y, 0.f);
+// 
+// 			glTexCoord2f(1.f, 1.f);
+// 			glVertex3f((float)fbSize.x, (float)fbSize.y, 0.f);
+// 
+// 			glTexCoord2f(1.f, 0.f);
+// 			glVertex3f((float)fbSize.x, 0.f, 0.f);
+// 		}
+// 		glEnd();
 	}
 
 	virtual void run() override {
@@ -80,9 +80,6 @@ struct MyWindow : public GLFCameraWindow {
 		glfwSetMouseButtonCallback(handle, glfwindow_mouseButton_cb);
 		glfwSetCursorPosCallback(handle, glfwindow_mouseMotion_cb);
 
-		// Our state
-		bool show_demo_window = true;
-
 		while (!glfwWindowShouldClose(handle)) {
 			render();
 			draw();
@@ -93,15 +90,24 @@ struct MyWindow : public GLFCameraWindow {
 			ImGui::NewFrame();
 			ImGui::DockSpaceOverViewport();
 
-			if (show_demo_window)
-				ImGui::ShowDemoWindow(&show_demo_window);
-			// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+			//ImGui::ShowDemoWindow(&show_demo_window);
 			{
-				static float f = 0.0f;
-				static int counter = 0;
-
-				ImGui::Begin("Render Information:"); 
-				ImGui::Checkbox("Move Camera", &this->change_camera);
+				ImGui::Begin("Render Information:"); ImGui::SameLine();
+				ImGui::Checkbox("Move Camera", &this->change_camera); ImGui::SameLine();
+				ImGui::Checkbox("Denoising", &renderer.denoiserOn); ImGui::SameLine();
+				ImGui::Checkbox("Progressive", &renderer.accumulate); ImGui::SameLine();
+				if (ImGui::Button("Increace SPP")) {
+					renderer.launchParams.numPixelSamples++;
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Decrease SPP")) {
+					renderer.launchParams.numPixelSamples--;
+					if (renderer.launchParams.numPixelSamples < 1) {
+						renderer.launchParams.numPixelSamples = 1;
+					}
+				}
+				ImGui::SameLine();
+				ImGui::Text("SPP = %d", renderer.launchParams.numPixelSamples);
 				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io->Framerate, io->Framerate);
 				ImGui::Image((void*)(intptr_t)fbTexture, ImVec2(fbSize.x, fbSize.y), ImVec2(0, 1), ImVec2(1, 0));
 				ImGui::End();
