@@ -1,8 +1,9 @@
 #include "Renderer.h"
-
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 // our helper library for window handling
 #include "glfWindow/GLFWindow.h"
 #include <GL/gl.h>
+#include "3rdParty/stb_image_write.h"
 
 struct MyWindow : public GLFCameraWindow {
 	MyWindow(const std::string& title, const Scene* scene, const Camera& camera, const float worldScale)
@@ -80,6 +81,8 @@ struct MyWindow : public GLFCameraWindow {
 		glfwSetMouseButtonCallback(handle, glfwindow_mouseButton_cb);
 		glfwSetCursorPosCallback(handle, glfwindow_mouseMotion_cb);
 
+		bool my_tool_active = true;
+
 		while (!glfwWindowShouldClose(handle)) {
 			render();
 			draw();
@@ -90,28 +93,39 @@ struct MyWindow : public GLFCameraWindow {
 			ImGui::NewFrame();
 			ImGui::DockSpaceOverViewport();
 
-			//ImGui::ShowDemoWindow(&show_demo_window);
-			{
-				ImGui::Begin("Render Information:"); ImGui::SameLine();
-				ImGui::Checkbox("Move Camera", &this->change_camera); ImGui::SameLine();
-				ImGui::Checkbox("Denoising", &renderer.denoiserOn); ImGui::SameLine();
-				ImGui::Checkbox("Progressive", &renderer.accumulate); ImGui::SameLine();
-				if (ImGui::Button("Increace SPP")) {
-					renderer.launchParams.numPixelSamples++;
-				}
-				ImGui::SameLine();
-				if (ImGui::Button("Decrease SPP")) {
-					renderer.launchParams.numPixelSamples--;
-					if (renderer.launchParams.numPixelSamples < 1) {
-						renderer.launchParams.numPixelSamples = 1;
+			ImGui::Begin("Render Window", &my_tool_active, ImGuiWindowFlags_MenuBar);
+			if (ImGui::BeginMenuBar()) {
+				if (ImGui::BeginMenu("File")) {
+					if (ImGui::MenuItem("Open Scene", "Ctrl+O")) {
+						
 					}
+					if (ImGui::MenuItem("Save Image", "Ctrl+S")) {
+						stbi_flip_vertically_on_write(true);
+						stbi_write_png("image.png", width, height, 4, pixels.data(), 0);
+						std::cout << "save image" << std::endl;
+					}
+					ImGui::EndMenu();
 				}
-				ImGui::SameLine();
-				ImGui::Text("SPP = %d", renderer.launchParams.numPixelSamples);
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io->Framerate, io->Framerate);
-				ImGui::Image((void*)(intptr_t)fbTexture, ImVec2(fbSize.x, fbSize.y), ImVec2(0, 1), ImVec2(1, 0));
-				ImGui::End();
+				ImGui::EndMenuBar();
 			}
+
+			ImGui::Checkbox("Move Camera", &this->change_camera); ImGui::SameLine();
+			ImGui::Checkbox("Denoising", &renderer.denoiserOn); ImGui::SameLine();
+			ImGui::Checkbox("Progressive", &renderer.accumulate); ImGui::SameLine();
+			ImGui::Text("SPP = %d", renderer.launchParams.numPixelSamples); ImGui::SameLine();
+			if (ImGui::Button("Increace SPP")) {
+				renderer.launchParams.numPixelSamples++;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Decrease SPP")) {
+				renderer.launchParams.numPixelSamples--;
+				if (renderer.launchParams.numPixelSamples < 1) {
+					renderer.launchParams.numPixelSamples = 1;
+				}
+			}				
+			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io->Framerate, io->Framerate);
+			ImGui::Image((void*)(intptr_t)fbTexture, ImVec2(fbSize.x, fbSize.y), ImVec2(0, 1), ImVec2(1, 0));
+			ImGui::End();
 
 			// Rendering
 			ImGui::Render();
@@ -121,8 +135,7 @@ struct MyWindow : public GLFCameraWindow {
 			// Update and Render additional Platform Windows
 			// (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
 			//  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
-			if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			{
+			if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
 				GLFWwindow* backup_current_context = glfwGetCurrentContext();
 				ImGui::UpdatePlatformWindows();
 				ImGui::RenderPlatformWindowsDefault();
