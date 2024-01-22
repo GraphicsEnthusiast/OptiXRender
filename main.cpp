@@ -96,10 +96,10 @@ struct MyWindow : public GLFCameraWindow {
 			ImGui::Begin("Render Window", &my_tool_active, ImGuiWindowFlags_MenuBar);
 			if (ImGui::BeginMenuBar()) {
 				if (ImGui::BeginMenu("File")) {
-					if (ImGui::MenuItem("Open Scene", "Ctrl+O")) {
+					if (ImGui::MenuItem("Open Scene")) {
 						
 					}
-					if (ImGui::MenuItem("Save Image", "Ctrl+S")) {
+					if (ImGui::MenuItem("Save Image")) {
 						stbi_flip_vertically_on_write(true);
 						stbi_write_png("image.png", fbSize.x, fbSize.y, 4, pixels.data(), 0);
 						std::cout << "save image" << std::endl;
