@@ -101,7 +101,7 @@ struct MyWindow : public GLFCameraWindow {
 					}
 					if (ImGui::MenuItem("Save Image", "Ctrl+S")) {
 						stbi_flip_vertically_on_write(true);
-						stbi_write_png("image.png", width, height, 4, pixels.data(), 0);
+						stbi_write_png("image.png", fbSize.x, fbSize.y, 4, pixels.data(), 0);
 						std::cout << "save image" << std::endl;
 					}
 					ImGui::EndMenu();
