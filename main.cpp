@@ -92,12 +92,12 @@ struct MyWindow : public GLFCameraWindow {
 			ImGui::Checkbox("Move Camera", &this->change_camera); ImGui::SameLine();
 			ImGui::Checkbox("Denoising", &renderer.denoiserOn); ImGui::SameLine();
 			ImGui::Checkbox("Progressive", &renderer.progressive); ImGui::SameLine();
-			ImGui::Text("		Number of samples per pixel per frame = %d", renderer.launchParams.numPixelSamples); ImGui::SameLine();
-			if (ImGui::Button("Increace SPP")) {
+			ImGui::Text("		Number of samples per pixel per frame = %d :", renderer.launchParams.numPixelSamples); ImGui::SameLine();
+			if (ImGui::Button("Increace")) {
 				renderer.launchParams.numPixelSamples++;
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Decrease SPP")) {
+			if (ImGui::Button("Decrease")) {
 				renderer.launchParams.numPixelSamples--;
 				if (renderer.launchParams.numPixelSamples < 1) {
 					renderer.launchParams.numPixelSamples = 1;
