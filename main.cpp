@@ -49,26 +49,6 @@ struct MyWindow : public GLFCameraWindow {
 		glDisable(GL_DEPTH_TEST);
 
 		glViewport(0, 0, fbSize.x, fbSize.y);
-
-// 		glMatrixMode(GL_PROJECTION);
-// 		glLoadIdentity();
-// 		glOrtho(0.f, (float)fbSize.x, 0.f, (float)fbSize.y, -1.f, 1.f);
-// 
-// 		glBegin(GL_QUADS);
-// 		{
-// 			glTexCoord2f(0.f, 0.f);
-// 			glVertex3f(0.f, 0.f, 0.f);
-// 
-// 			glTexCoord2f(0.f, 1.f);
-// 			glVertex3f(0.f, (float)fbSize.y, 0.f);
-// 
-// 			glTexCoord2f(1.f, 1.f);
-// 			glVertex3f((float)fbSize.x, (float)fbSize.y, 0.f);
-// 
-// 			glTexCoord2f(1.f, 0.f);
-// 			glVertex3f((float)fbSize.x, 0.f, 0.f);
-// 		}
-// 		glEnd();
 	}
 
 	virtual void run() override {
@@ -111,8 +91,8 @@ struct MyWindow : public GLFCameraWindow {
 
 			ImGui::Checkbox("Move Camera", &this->change_camera); ImGui::SameLine();
 			ImGui::Checkbox("Denoising", &renderer.denoiserOn); ImGui::SameLine();
-			ImGui::Checkbox("Progressive", &renderer.accumulate); ImGui::SameLine();
-			ImGui::Text("SPP = %d", renderer.launchParams.numPixelSamples); ImGui::SameLine();
+			ImGui::Checkbox("Progressive", &renderer.progressive); ImGui::SameLine();
+			ImGui::Text("Number of samples per pixel per frame = %d", renderer.launchParams.numPixelSamples); ImGui::SameLine();
 			if (ImGui::Button("Increace SPP")) {
 				renderer.launchParams.numPixelSamples++;
 			}
@@ -122,7 +102,7 @@ struct MyWindow : public GLFCameraWindow {
 				if (renderer.launchParams.numPixelSamples < 1) {
 					renderer.launchParams.numPixelSamples = 1;
 				}
-			}				
+			}
 			ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io->Framerate, io->Framerate);
 			ImGui::Image((void*)(intptr_t)fbTexture, ImVec2(fbSize.x, fbSize.y), ImVec2(0, 1), ImVec2(1, 0));
 			ImGui::End();
@@ -158,8 +138,8 @@ struct MyWindow : public GLFCameraWindow {
 			std::cout << "denoising now " << (renderer.denoiserOn ? "ON" : "OFF") << std::endl;
 		}
 		if (key == 'A' || key == 'a') {
-			renderer.accumulate = !renderer.accumulate;
-			std::cout << "accumulation/progressive refinement now " << (renderer.accumulate ? "ON" : "OFF") << std::endl;
+			renderer.progressive = !renderer.progressive;
+			std::cout << "accumulation/progressive refinement now " << (renderer.progressive ? "ON" : "OFF") << std::endl;
 		}
 		if (key == ',') {
 			renderer.launchParams.numPixelSamples

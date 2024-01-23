@@ -639,7 +639,7 @@ void Renderer::Render() {
         return;
     }
 
-    if (!accumulate) {
+    if (!progressive) {
         launchParams.frame.frameID = 0;
     }
     launchParamsBuffer.upload(&launchParams, 1);
@@ -669,7 +669,7 @@ void Renderer::Render() {
     }
 #endif
     denoiserParams.hdrIntensity = denoiserIntensity.d_pointer();
-    if (accumulate) {
+    if (progressive) {
         denoiserParams.blendFactor = 1.0f / (launchParams.frame.frameID);
     }
     else {

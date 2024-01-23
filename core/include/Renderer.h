@@ -137,7 +137,7 @@ protected:
 
 public:
     bool denoiserOn = false;
-    bool accumulate = false;
+    bool progressive = false;
 
     // 这个文件是定义了一个缓冲区结构体，管线会不断将光追结果写入这个结构体。
     LaunchParams launchParams;
