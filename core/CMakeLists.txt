@@ -22,6 +22,7 @@ add_library(core
 
 target_include_directories(core PUBLIC 
     ${PROJECT_SOURCE_DIR}/include
+    ../common/3rdParty/nlohmann_json/include
 )
 
 target_link_libraries(core PUBLIC

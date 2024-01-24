@@ -63,6 +63,7 @@ add_executable(OptiXRender
 target_include_directories(OptiXRender PUBLIC
   core/include
   common/
+  common/3rdParty/nlohmann_json/include
 )
 
 target_link_libraries(OptiXRender
