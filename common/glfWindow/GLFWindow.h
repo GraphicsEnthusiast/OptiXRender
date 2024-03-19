@@ -12,7 +12,7 @@
 using namespace gdt;
 
 struct GLFWindow {
-    GLFWindow(const std::string& title);
+    GLFWindow(const std::string& title, int width = 1200, int height = 800);
     ~GLFWindow();
 
     /*! put pixels on the screen ... */
@@ -270,8 +270,9 @@ struct GLFCameraWindow : public GLFWindow {
         const vec3f& camera_from,
         const vec3f& camera_at,
         const vec3f& camera_up,
-        const float worldScale)
-        : GLFWindow(title),
+        const float worldScale,
+        int width = 1200, int height = 800)
+        : GLFWindow(title, width, height),
         cameraFrame(worldScale)
     {
         cameraFrame.setOrientation(camera_from, camera_at, camera_up);

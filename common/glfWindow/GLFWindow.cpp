@@ -18,7 +18,7 @@ GLFWindow::~GLFWindow()
 	glfwTerminate();
 }
 
-GLFWindow::GLFWindow(const std::string& title)
+GLFWindow::GLFWindow(const std::string& title, int width, int height)
 {
 	glfwSetErrorCallback(glfw_error_callback);
 	// glfwInitHint(GLFW_COCOA_MENUBAR, GLFW_FALSE);
@@ -30,7 +30,7 @@ GLFWindow::GLFWindow(const std::string& title)
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 	glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
 
-	handle = glfwCreateWindow(1200, 800, title.c_str(), NULL, NULL);
+	handle = glfwCreateWindow(width, height, title.c_str(), NULL, NULL);
 	if (!handle) {
 		glfwTerminate();
 		exit(EXIT_FAILURE);

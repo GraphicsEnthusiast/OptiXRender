@@ -3,11 +3,12 @@
 // our helper library for window handling
 #include "glfWindow/GLFWindow.h"
 #include <GL/gl.h>
+#include "SceneParser.h"
 #include "3rdParty/stb_image_write.h"
 
 struct MyWindow : public GLFCameraWindow {
-	MyWindow(const std::string& title, const Scene* scene, const Camera& camera, const float worldScale)
-		: GLFCameraWindow(title, camera.from, camera.at, camera.up, worldScale),
+	MyWindow(const std::string& title, const Scene* scene, const Camera& camera, const float worldScale, const SceneParser parser)
+		: GLFCameraWindow(title, camera.from, camera.at, camera.up, worldScale, parser.width, parser.height),
 		renderer(scene) {
 		renderer.SetCamera(camera);
 		camera_medium = camera.medium;
@@ -50,7 +51,6 @@ struct MyWindow : public GLFCameraWindow {
 
 		glViewport(0, 0, fbSize.x, fbSize.y);
 	}
-
 	virtual void run() override {
 		int width, height;
 		glfwGetFramebufferSize(handle, &width, &height);
@@ -241,8 +241,11 @@ extern "C" int main(int ac, char** av) {
 		light.radiance = vec3f(15.0f, 0.0f, 0.0f);
 		//scene.AddLight(light);
 
-		MyWindow* window = new MyWindow("OptiXRender",
-			&scene, camera, worldScale);
+		SceneParser parser;
+		bool is_succeed;
+		parser.LoadFromJson("../../models/test.json", scene, is_succeed);
+
+		MyWindow* window = new MyWindow("OptiXRender", &scene, camera, worldScale, parser);
 		//      window->enableFlyMode();
 		window->enableInspectMode();
 

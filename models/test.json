@@ -1,0 +1,129 @@
+{
+    "width": 800,
+    "height": 600,
+    "depth": 5,
+    "filter": {
+        "type": "gaussian"
+    },
+    "camera": {
+        "look_from": [ 15, 12, 0 ],
+        "up": [ 0, 1, 0 ]
+    },
+    "light": [
+        {
+            "type": "infinite",
+            "hdr_path": "scene/test/hdr/spruit_sunrise_4k.hdr",
+            "scale": 1
+        }
+    ],
+    "shape": [
+        {
+            "type": "mesh",
+            "mesh_path": "scene/test/model/teapot.obj",
+            "translate": [ 0, 0, 0 ],
+            "rotate": [ 0, 0, 0 ],
+            "scale": [ 1, 1, 1 ],
+            "material": "die1"
+        },
+        {
+            "type": "mesh",
+            "mesh_path": "scene/test/model/fluid.obj",
+            "translate": [ 0, 0, 0 ],
+            "rotate": [ 0, 0, 0 ],
+            "scale": [ 1, 1, 1 ],
+            "material": "die2",
+            "medium_int": "fluid"
+        },
+        {
+            "type": "mesh",
+            "mesh_path": "scene/test/model/clock.obj",
+            "translate": [ 0, 0, 0 ],
+            "rotate": [ 0, 0, 0 ],
+            "scale": [ 1, 1, 1 ],
+            "material": "clock"
+        },
+        {
+            "type": "mesh",
+            "mesh_path": "scene/test/model/dragon.obj",
+            "translate": [ 0, 0, 0 ],
+            "rotate": [ 0, 0, 0 ],
+            "scale": [ 1, 1, 1 ],
+            "material": "die2",
+            "medium_int": "cream"
+        },
+        {
+            "type": "mesh",
+            "mesh_path": "scene/test/model/plane.obj",
+            "translate": [ 0, 0, 0 ],
+            "rotate": [ 0, 0, 0 ],
+            "scale": [ 1, 1, 1 ],
+            "material": "dif"
+        }
+    ],
+    "material": [
+        {
+            "type": "metal_workflow",
+            "name": "clock",
+            "metallic_texture_type": "image",
+            "metallic_path": "scene/test/texture/clock_metallic.bmp",
+            "roughness_texture_type": "image",
+            "roughness_path": "scene/test/texture/clock_roughness.bmp",
+            "albedo_texture_type": "image",
+            "albedo_path": "scene/test/texture/clock_albedo.bmp",
+            "normal_texture_type": "image",
+            "normal_path": "scene/test/texture/clock_normal.bmp"
+        },
+        {
+            "type": "rough_dielectric",
+            "name": "die1",
+            "albedo_texture_type": "constant",
+            "albedo": [ 1.0, 1.0, 1.0 ],
+            "roughness_texture_type": "constant",
+            "roughness": 0.05,
+            "anisotropy_texture_type": "constant",
+            "anisotropy": 0.0,
+            "int_ior": 1.5,
+            "ext_ior": 1.0
+        },
+        {
+            "type": "smooth_dielectric",
+            "name": "die2",
+            "albedo_texture_type": "constant",
+            "albedo": [ 1.0, 1.0, 1.0 ],
+            "int_ior": 1.33,
+            "ext_ior": 1.0
+        },
+        {
+            "type": "smooth_diffuse",
+            "name": "dif",
+            "albedo_texture_type": "constant",
+            "albedo": [ 0.7, 0.7, 0.7 ]
+        }
+    ],
+    "medium": [
+        {
+            "type": "homogeneous",
+            "name": "fluid",
+            "phase": "isotropic",
+            "sigma_a": [ 0.1486, 0.321, 0.736 ],
+            "sigma_s": [ 0, 0, 0 ],
+            "scale": 0.6
+        },
+        {
+            "type": "homogeneous",
+            "name": "milk",
+            "phase": "isotropic",
+            "sigma_a": [ 0.70, 1.22, 1.90 ],
+            "sigma_s": [ 0.0014, 0.0025, 0.0142 ],
+            "scale": 0.5
+        },
+        {
+            "type": "homogeneous",
+            "name": "cream",
+            "phase": "isotropic",
+            "sigma_a": [ 7.38, 5.47, 3.15 ],
+            "sigma_s": [ 0.0002, 0.0028, 0.0163 ],
+            "scale": 0.3
+        }
+    ]
+}

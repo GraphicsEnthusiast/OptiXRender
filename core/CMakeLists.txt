@@ -16,8 +16,10 @@ add_library(core
     ./include/LaunchParams.h
     ./include/Renderer.h
     ./include/Scene.h
+    ./include/SceneParser.h
     src/Renderer.cpp
     src/Scene.cpp
+    src/SceneParser.cpp
 )
 
 target_include_directories(core PUBLIC 
